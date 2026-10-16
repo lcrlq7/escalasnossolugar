@@ -132,15 +132,26 @@ export function Layout() {
   const loc = useLocation()
   const { church } = useAuth()
   const [drawer, setDrawer] = useState(false)
+  useEffect(() => {
+    const h = (e: PointerEvent) => {
+      const c = (e.target as HTMLElement | null)?.closest?.('.card') as HTMLElement | null
+      if (!c) return
+      const r = c.getBoundingClientRect()
+      c.style.setProperty('--mx', `${e.clientX - r.left}px`); c.style.setProperty('--my', `${e.clientY - r.top}px`)
+    }
+    document.addEventListener('pointermove', h, { passive: true })
+    return () => document.removeEventListener('pointermove', h)
+  }, [])
   useEffect(() => setDrawer(false), [loc.pathname])
   useEffect(() => { if (church?.system_name) document.title = church.system_name }, [church?.system_name])
   const bottom = items.filter((i) => ['/', '/escalas', '/calendario', '/musicas'].includes(i.to))
 
   return (
-    <div className="flex min-h-full">
+    <div className="relative flex min-h-full">
+      <div className="aurora" aria-hidden><i className="animate-float left-[8%] top-[-8%] h-80 w-80 bg-accent/60" /><i className="animate-float2 bottom-[-10%] right-[5%] h-96 w-96 bg-info/50" /></div>
       <datalist id="keys-list">{KEYS.map((k) => <option key={k} value={k} />)}</datalist>
       {/* Menu lateral (computador) */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-surface px-4 py-5 md:flex">
+      <aside className="relative z-10 sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-surface px-4 py-5 md:flex">
         <Brand />
         <p className="mt-3 px-1 text-[11px] font-bold uppercase tracking-widest text-muted">{church?.system_name ?? 'Louvor em Escala'}</p>
         <nav className="mt-4 flex-1 space-y-1 overflow-y-auto">
@@ -154,7 +165,7 @@ export function Layout() {
         </nav>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-bg/85 px-4 py-2.5 backdrop-blur md:px-8">
           <div className="md:hidden"><Brand compact /></div>
           <div className="hidden md:block" />
@@ -169,13 +180,13 @@ export function Layout() {
       </div>
 
       {/* Navegação inferior (celular) */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-surface/95 backdrop-blur safe-bottom md:hidden" aria-label="Navegação principal">
+      <nav className="dock md:!hidden" aria-label="Navegação principal">
         {bottom.map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end}
-            className={({ isActive }) => cn('press flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-semibold transition-colors', isActive ? 'text-accenttext' : 'text-muted')}>
+            className={({ isActive }) => cn('press flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 text-[11px] font-semibold transition-all duration-300', isActive ? 'bg-accent/15 text-accenttext' : 'text-muted')}>
             {({ isActive }: { isActive: boolean }) => <><i.icon className={cn('h-5 w-5', isActive && 'nav-active')} />{i.label}</>}</NavLink>
         ))}
-        <button onClick={() => setDrawer(true)} className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-semibold text-muted"><Menu className="h-5 w-5" />Mais</button>
+        <button onClick={() => setDrawer(true)} className="press flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 text-[11px] font-semibold text-muted"><Menu className="h-5 w-5" />Mais</button>
       </nav>
       {drawer && (
         <div className="fixed inset-0 z-50 md:hidden">

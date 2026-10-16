@@ -11,7 +11,7 @@ import { AddSongModal, SongFormModal } from '../components/SongForm'
 import { ImportPlaylistModal } from '../components/ImportPlaylistModal'
 import { addDays, cn, fmtDate, fmtDuration, normalize, todayStr } from '../lib/utils'
 import type { Song } from '../types'
-import { Badge, Button, ConfirmDialog, Cover, EmptyState, Field, IconButton, Input, Modal, PageHeader, PageLoader, Tabs, Textarea } from '../components/ui'
+import { Badge, Button, ConfirmDialog, Cover, EmptyState, Fab, Field, IconButton, Input, Modal, PageHeader, PageLoader, Tabs, Textarea } from '../components/ui'
 
 interface Suggestion { id: string; title: string; artist: string | null; link: string | null; note: string | null; status: 'pending' | 'accepted' | 'rejected'; created_at: string; suggested_by: string; who: { full_name: string } | null }
 
@@ -177,6 +177,7 @@ export default function Songs() {
       <PageHeader title="Músicas" subtitle="Biblioteca do ministério: letras, tons, links e histórico de uso."
         actions={isLeader && tab === 'lib' && <div className="flex w-full flex-wrap gap-2 [&>.btn]:flex-1 sm:w-auto sm:[&>.btn]:flex-none"><Button variant="outline" onClick={() => setImp(true)}>Importar playlist</Button>{missingCovers.length > 0 && <Button variant="outline" loading={cov} onClick={fetchCovers}>Buscar capas ({missingCovers.length})</Button>}<Button variant="primary" onClick={() => setAdd(true)}><Plus className="h-4 w-4" />Adicionar música</Button></div>} />
       <Tabs value={tab === 'sug' ? 'sug' : 'lib'} onChange={(v) => setSp(v === 'sug' ? { aba: 'sugestoes' } : {})} items={[{ value: 'lib', label: 'Biblioteca', count: (songs.data ?? []).filter((s) => !s.archived).length }, { value: 'sug', label: 'Sugestões' }]} />
+      {isLeader && tab !== 'sug' && <Fab label="Adicionar música" onClick={() => setAdd(true)}><Plus className="h-6 w-6" /></Fab>}
       {tab === 'sug' ? <Suggestions /> : (<>
         <div className="sticky top-[57px] z-20 -mx-4 mb-3 space-y-2 bg-bg/90 px-4 pb-2 pt-2 backdrop-blur md:static md:mx-0 md:flex md:flex-wrap md:space-y-0 md:gap-2 md:bg-transparent md:p-0 md:pb-0 md:backdrop-blur-none md:mb-4">
           <div className="relative min-w-[14rem] flex-1"><Search className="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-muted" /><Input className="!pl-10" placeholder="Buscar por título, artista, álbum ou tag" value={q} onChange={(e) => { setQ(e.target.value); setShown(60) }} /></div>

@@ -11,6 +11,7 @@ import { SetlistEditor } from '../components/SetlistEditor'
 import { nextWeekday, useAssignments, useEventAlerts, useEventFull, useEventSetlist } from '../lib/events'
 import { EVENT_TYPES, STATUS_LABEL, fmtDateTime, todayStr, nextSunday } from '../lib/utils'
 import type { EventType } from '../types'
+import { confetti } from '../lib/confetti'
 import { Badge, Button, Card, ConfirmDialog, Field, Input, Modal, PageHeader, PageLoader, SectionTitle, Select, Textarea } from '../components/ui'
 import { statusTone } from './Events'
 
@@ -102,7 +103,7 @@ export default function EventEditor() {
     catch (err) { toast.error(err) }
   }
   const tryPublish = async () => { if (await save()) { await alerts.refetch(); setPublishOpen(true) } }
-  const publish = async () => { setPublishOpen(false); await setStatus('published', {}, 'Escala publicada. Os integrantes foram notificados.') }
+  const publish = async () => { setPublishOpen(false); await setStatus('published', {}, 'Escala publicada. Os integrantes foram notificados.'); confetti() }
   const duplicate = async () => {
     if (!dupDate) return toast.error('Escolha a data da nova escala.')
     try { const nid = unwrap(await supabase.rpc('duplicate_event', { p_event_id: id!, p_new_date: dupDate })) as unknown as string; toast.success('Escala duplicada como rascunho.'); setDupOpen(false); qc.invalidateQueries({ queryKey: ['events-list'] }); nav(`/escalas/${nid}/editar`) }

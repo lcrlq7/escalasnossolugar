@@ -79,7 +79,7 @@ export function SectionTitle({ title, action, subtitle }: { title: string; subti
     </div>
   )
 }
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
+export function PageHeader({ title, subtitle, actions }: { title: ReactNode; subtitle?: string; actions?: ReactNode }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div><h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">{title}</h1>{subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}</div>
@@ -209,4 +209,33 @@ export function ClickAway({ onAway, children, className }: { onAway: () => void;
     return () => document.removeEventListener('mousedown', h)
   }, [onAway])
   return <div ref={ref} className={className}>{children}</div>
+}
+
+export function CountUp({ value, duration = 900 }: { value: number | string; duration?: number }) {
+  const target = typeof value === 'number' ? value : Number.NaN
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    if (Number.isNaN(target)) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { setN(target); return }
+    let raf = 0
+    const t0 = performance.now()
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - t0) / duration)
+      setN(Math.round(target * (1 - Math.pow(1 - k, 3))))
+      if (k < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, duration])
+  return <>{Number.isNaN(target) ? value : n}</>
+}
+
+/** Botão flutuante (só no celular) com pulso suave. */
+export function Fab({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+  return (
+    <button onClick={onClick} aria-label={label}
+      className="fab-pulse press fixed bottom-[5.75rem] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accentfg shadow-xl md:hidden">
+      {children}
+    </button>
+  )
 }

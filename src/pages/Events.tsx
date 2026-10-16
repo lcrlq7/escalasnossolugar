@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarPlus, CheckCircle2, ClipboardList, Clock, MapPin, Search, Users, XCircle } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { EVENT_TYPES, STATUS_LABEL, cn, fmtTime, normalize, parseDate, todayStr } from '../lib/utils'
 import type { EventRow, EventStatus, ResponseStatus } from '../types'
-import { Badge, Button, EmptyState, Input, PageHeader, PageLoader, Tabs } from '../components/ui'
+import { Badge, Button, EmptyState, Fab, Input, PageHeader, PageLoader, Tabs } from '../components/ui'
 
 export type EventListItem = EventRow & { event_assignments: { member_id: string; status: ResponseStatus }[] }
 
@@ -56,6 +56,7 @@ export function EventCard({ e, myMemberId }: { e: EventListItem; myMemberId?: st
 
 export default function Events() {
   const { isLeader, member } = useAuth()
+  const nav = useNavigate()
   const [tab, setTab] = useState<'next' | 'draft' | 'past' | 'cancelled'>('next')
   const [q, setQ] = useState('')
   const query = useQuery({
@@ -86,6 +87,7 @@ export default function Events() {
       <PageHeader title="Escalas" subtitle="Cultos, ensaios e eventos do ministério de louvor."
         actions={isLeader && <Link to="/escalas/nova"><Button variant="primary"><CalendarPlus className="h-4 w-4" />Nova escala</Button></Link>} />
       <div className="mb-4 relative"><Search className="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-muted" /><Input className="!pl-10" placeholder="Buscar por nome, tipo ou local" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+      {isLeader && <Fab label="Nova escala" onClick={() => nav('/escalas/nova')}><CalendarPlus className="h-6 w-6" /></Fab>}
       <Tabs value={tab} onChange={setTab} items={items} />
       {query.isLoading ? <PageLoader /> : list.length === 0 ? (
         <EmptyState icon={<ClipboardList className="h-6 w-6" />} title={tab === 'next' ? 'Nenhuma escala publicada para os próximos dias' : tab === 'draft' ? 'Nenhum rascunho' : 'Nada por aqui'}

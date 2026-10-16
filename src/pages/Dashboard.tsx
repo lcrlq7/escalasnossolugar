@@ -13,7 +13,7 @@ import { useSongs } from '../lib/queries'
 import { resolveItems } from '../lib/setlist'
 import { addDays, EVENT_TYPES, fmtDate, fmtDateLong, fmtTime, STATUS_LABEL, todayStr, toISODate } from '../lib/utils'
 import type { Alert, EventRow, ResponseStatus, SetlistItem } from '../types'
-import { Avatar, Badge, Button, Card, Cover, EmptyState, Field, Input, Modal, PageHeader, PageLoader, SectionTitle, Textarea } from '../components/ui'
+import { Avatar, Badge, Button, Card, CountUp, Cover, EmptyState, Field, Input, Modal, PageHeader, PageLoader, SectionTitle, Textarea } from '../components/ui'
 import { statusTone } from './Events'
 
 type DashEvent = EventRow & {
@@ -25,7 +25,7 @@ function Stat({ icon, label, value, hint }: { icon: React.ReactNode; label: stri
   return (
     <Card className="flex items-center gap-4 p-4">
       <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accenttext">{icon}</span>
-      <div><p className="text-2xl font-extrabold leading-none">{value}</p><p className="mt-1 text-xs text-muted">{label}</p>{hint && <p className="text-[11px] text-muted">{hint}</p>}</div>
+      <div><p className="text-2xl font-extrabold leading-none">{typeof value === 'number' ? <CountUp value={value} /> : value}</p><p className="mt-1 text-xs text-muted">{label}</p>{hint && <p className="text-[11px] text-muted">{hint}</p>}</div>
     </Card>
   )
 }
@@ -101,7 +101,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={`${greet}, ${profile?.full_name.split(' ')[0] ?? ''}!`} subtitle={fmtDateLong(today)}
+      <PageHeader title={<><span className="grad-text">{greet}, {profile?.full_name.split(' ')[0] ?? ''}!</span> <span className="wave">👋</span></>} subtitle={fmtDateLong(today)}
         actions={isLeader && (<>
           <Link to="/escalas/nova"><Button variant="primary"><CalendarPlus className="h-4 w-4" />Criar escala</Button></Link>
           <Button onClick={() => setAddSong(true)}><Plus className="h-4 w-4" />Adicionar música</Button></>)} />
