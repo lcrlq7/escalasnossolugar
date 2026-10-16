@@ -132,6 +132,8 @@ export function SongFormModal({ open, song, initial, onClose, onSaved }:
           <div className="flex flex-wrap gap-2 text-xs">
             <a className="inline-flex items-center gap-1 text-accenttext" href={youtubeSearchUrl(q)} target="_blank" rel="noreferrer"><Youtube className="h-3.5 w-3.5" />Procurar no YouTube<ExternalLink className="h-3 w-3" /></a>
             <a className="inline-flex items-center gap-1 text-accenttext" href={spotifySearchUrl(q)} target="_blank" rel="noreferrer"><Music2 className="h-3.5 w-3.5" />Procurar no Spotify<ExternalLink className="h-3 w-3" /></a>
+            <a className="inline-flex items-center gap-1 text-accenttext" href={`https://www.cifraclub.com.br/?q=${encodeURIComponent(q)}`} target="_blank" rel="noreferrer"><Search className="h-3.5 w-3.5" />Procurar cifra e tom<ExternalLink className="h-3 w-3" /></a>
+            <a className="inline-flex items-center gap-1 text-accenttext" href={`https://www.letras.mus.br/?q=${encodeURIComponent(q)}`} target="_blank" rel="noreferrer"><Search className="h-3.5 w-3.5" />Procurar letra<ExternalLink className="h-3 w-3" /></a>
           </div>
         )}
         <Field label="Tags e categorias" hint="Separe por vírgula. Ex.: adoração, cura, celebração"><Input value={f.tags} onChange={(e) => set('tags', e.target.value)} /></Field>
