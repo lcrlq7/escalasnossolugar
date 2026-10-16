@@ -9,7 +9,7 @@ import { useFavorites, useSongs } from '../lib/queries'
 import { useSongUsage } from '../lib/usage'
 import { AddSongModal, SongFormModal } from '../components/SongForm'
 import { ImportPlaylistModal } from '../components/ImportPlaylistModal'
-import { addDays, cn, fmtDate, fmtDuration, normalize, todayStr } from '../lib/utils'
+import { addDays, cn, fmtDate, fmtDuration, normalize, todayStr, safeUrl } from '../lib/utils'
 import type { Song } from '../types'
 import { Badge, Button, ConfirmDialog, Cover, EmptyState, Fab, Field, IconButton, Input, Modal, PageHeader, PageLoader, Tabs, Textarea } from '../components/ui'
 
@@ -48,8 +48,8 @@ function SongDetail({ song, onClose, onEdit }: { song: Song; onClose: () => void
             {song.archived && <Badge tone="warn">Arquivada</Badge>}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            {song.youtube_url && <a className="btn bg-surface2 hover:bg-border" href={song.youtube_url} target="_blank" rel="noreferrer"><Youtube className="h-4 w-4" />YouTube<ExternalLink className="h-3 w-3" /></a>}
-            {song.spotify_url && <a className="btn bg-surface2 hover:bg-border" href={song.spotify_url} target="_blank" rel="noreferrer"><Music2 className="h-4 w-4" />Spotify<ExternalLink className="h-3 w-3" /></a>}
+            {song.youtube_url && <a className="btn bg-surface2 hover:bg-border" href={safeUrl(song.youtube_url)} target="_blank" rel="noreferrer"><Youtube className="h-4 w-4" />YouTube<ExternalLink className="h-3 w-3" /></a>}
+            {song.spotify_url && <a className="btn bg-surface2 hover:bg-border" href={safeUrl(song.spotify_url)} target="_blank" rel="noreferrer"><Music2 className="h-4 w-4" />Spotify<ExternalLink className="h-3 w-3" /></a>}
           </div>
           {song.tags.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{song.tags.map((t) => <Badge key={t} tone="info">{t}</Badge>)}</div>}
         </div>
@@ -98,7 +98,7 @@ function Suggestions() {
           <div key={s.id} className="card flex flex-wrap items-center gap-3 p-3.5">
             <div className="min-w-0 flex-1"><p className="font-semibold">{s.title}{s.artist ? <span className="font-normal text-muted"> — {s.artist}</span> : null}</p>
               <p className="text-xs text-muted">{s.who?.full_name ?? 'Alguém'} · {fmtDate(s.created_at)}{s.note ? ` · ${s.note}` : ''}</p>
-              {s.link && <a href={s.link} target="_blank" rel="noreferrer" className="text-xs font-semibold text-accenttext">Abrir link</a>}</div>
+              {s.link && <a href={safeUrl(s.link)} target="_blank" rel="noreferrer" className="text-xs font-semibold text-accenttext">Abrir link</a>}</div>
             <Badge tone={s.status === 'accepted' ? 'ok' : s.status === 'rejected' ? 'danger' : 'warn'}>{s.status === 'accepted' ? 'Aceita' : s.status === 'rejected' ? 'Recusada' : 'Pendente'}</Badge>
             {isLeader && s.status === 'pending' && <div className="flex gap-1.5">
               <Button variant="primary" className="!px-3 !py-1.5 text-xs" onClick={() => setAdding(s)}><Check className="h-3.5 w-3.5" />Cadastrar</Button>

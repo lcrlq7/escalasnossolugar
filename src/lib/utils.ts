@@ -94,3 +94,9 @@ export function nextSunday(from = new Date()): string {
   d.setDate(d.getDate() + ((7 - d.getDay()) % 7))
   return toISODate(d)
 }
+
+/** Só aceita links http(s); evita `javascript:` e similares em href. */
+export function safeUrl(u?: string | null): string | undefined {
+  if (!u) return undefined
+  try { const p = new URL(u.trim()); return p.protocol === 'https:' || p.protocol === 'http:' ? p.href : undefined } catch { return undefined }
+}

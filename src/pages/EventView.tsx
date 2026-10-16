@@ -11,7 +11,7 @@ import { PlayerView } from '../components/PlayerView'
 import { useAssignments, useEventAlerts, useEventFull, useEventSetlist } from '../lib/events'
 import { resolveItems, shareUrl, totalSeconds } from '../lib/setlist'
 import { exportEventPdf } from '../lib/pdf'
-import { EVENT_TYPES, RESPONSE_LABEL, STATUS_LABEL, fmtDateLong, fmtDuration, fmtTime, fmtTotal } from '../lib/utils'
+import { EVENT_TYPES, RESPONSE_LABEL, STATUS_LABEL, fmtDateLong, fmtDuration, fmtTime, fmtTotal, safeUrl } from '../lib/utils'
 import type { SetlistItem } from '../types'
 import { Avatar, Badge, Button, Card, Cover, EmptyState, Modal, PageLoader, SectionTitle, Textarea, Toggle } from '../components/ui'
 import { statusTone } from './Events'
@@ -154,8 +154,8 @@ export default function EventView() {
                     </div>
                     {r.key && <span className="rounded-lg bg-accent px-2.5 py-1 text-sm font-extrabold text-accentfg">{r.key}</span>}
                     <div className="flex gap-1">
-                      {r.song?.youtube_url && <a aria-label="Abrir no YouTube" href={r.song.youtube_url} target="_blank" rel="noreferrer" className="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-fg"><Youtube className="h-4 w-4" /></a>}
-                      {r.song?.spotify_url && <a aria-label="Abrir no Spotify" href={r.song.spotify_url} target="_blank" rel="noreferrer" className="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-fg"><Music2 className="h-4 w-4" /></a>}
+                      {r.song?.youtube_url && <a aria-label="Abrir no YouTube" href={safeUrl(r.song.youtube_url)} target="_blank" rel="noreferrer" className="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-fg"><Youtube className="h-4 w-4" /></a>}
+                      {r.song?.spotify_url && <a aria-label="Abrir no Spotify" href={safeUrl(r.song.spotify_url)} target="_blank" rel="noreferrer" className="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-fg"><Music2 className="h-4 w-4" /></a>}
                     </div>
                   </>) : (<div className="flex-1"><Badge tone="info">{r.kind === 'prayer' ? 'Oração' : r.kind === 'transition' ? 'Transição' : 'Observação'}</Badge><span className="ml-2 text-sm">{r.note}</span></div>)}
                 </li>))}

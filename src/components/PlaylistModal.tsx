@@ -4,7 +4,7 @@ import { Check, ExternalLink, ListVideo, Music2, Youtube } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useToast } from '../context/Toast'
 import type { ResolvedItem } from '../lib/setlist'
-import { isUrl, spotifySearchUrl, youtubeSearchUrl } from '../lib/utils'
+import { isUrl, safeUrl, spotifySearchUrl, youtubeSearchUrl } from '../lib/utils'
 import { Button, Input, Modal, Spinner } from './ui'
 import { useAuth } from '../context/Auth'
 
@@ -125,7 +125,7 @@ export function PlaylistModal({ open, onClose, items, name }: { open: boolean; o
                 <Button className="mt-3" variant="primary" loading={sbusy} onClick={connect}>Conectar Spotify</Button></>)
               : created ? (<>
                 <p className="mt-1 text-sm text-ok">Playlist criada!</p>
-                <a href={created} target="_blank" rel="noreferrer"><Button className="mt-3" variant="primary"><ExternalLink className="h-4 w-4" />Abrir no Spotify</Button></a></>)
+                <a href={safeUrl(created)} target="_blank" rel="noreferrer"><Button className="mt-3" variant="primary"><ExternalLink className="h-4 w-4" />Abrir no Spotify</Button></a></>)
               : !found ? (<>
                 <p className="mt-1 text-sm text-muted">Conta conectada. Vamos procurar cada música no Spotify e você confirma antes de criar.</p>
                 <Button className="mt-3" variant="primary" loading={sbusy} onClick={searchSp}>Procurar músicas no Spotify</Button></>)

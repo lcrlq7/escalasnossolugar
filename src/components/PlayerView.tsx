@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, ExternalLink, FileText, X, Youtube, Music2 } from 'lucide-react'
-import { cn, fmtDuration, fmtTotal } from '../lib/utils'
+import { cn, fmtDuration, fmtTotal, safeUrl } from '../lib/utils'
 import { totalSeconds, KIND_LABEL, type ResolvedItem } from '../lib/setlist'
 import { Badge, Button, Cover, IconButton } from './ui'
 
@@ -48,8 +48,8 @@ export function PlayerView({ title, items, onClose }: { title: string; items: Re
                 {cur.note && <p className="mt-4 max-w-xl rounded-xl bg-surface2 px-4 py-3 text-sm">{cur.note}</p>}
                 {cur.song.notes && <p className="mt-2 max-w-xl text-sm text-muted">{cur.song.notes}</p>}
                 <div className="mt-5 flex flex-wrap justify-center gap-2">
-                  {cur.song.youtube_url && <a href={cur.song.youtube_url} target="_blank" rel="noreferrer" className="btn bg-surface2 hover:bg-border"><Youtube className="h-4 w-4" />Abrir no YouTube<ExternalLink className="h-3 w-3" /></a>}
-                  {cur.song.spotify_url && <a href={cur.song.spotify_url} target="_blank" rel="noreferrer" className="btn bg-surface2 hover:bg-border"><Music2 className="h-4 w-4" />Abrir no Spotify<ExternalLink className="h-3 w-3" /></a>}
+                  {cur.song.youtube_url && <a href={safeUrl(cur.song.youtube_url)} target="_blank" rel="noreferrer" className="btn bg-surface2 hover:bg-border"><Youtube className="h-4 w-4" />Abrir no YouTube<ExternalLink className="h-3 w-3" /></a>}
+                  {cur.song.spotify_url && <a href={safeUrl(cur.song.spotify_url)} target="_blank" rel="noreferrer" className="btn bg-surface2 hover:bg-border"><Music2 className="h-4 w-4" />Abrir no Spotify<ExternalLink className="h-3 w-3" /></a>}
                   {cur.song.lyrics && <Button onClick={() => setLyrics((l) => !l)}><FileText className="h-4 w-4" />{lyrics ? 'Ocultar letra' : 'Ver letra'}</Button>}
                 </div>
                 {lyrics && cur.song.lyrics && <pre className="mt-5 max-w-xl whitespace-pre-wrap text-left font-sans text-lg leading-relaxed">{cur.song.lyrics}</pre>}

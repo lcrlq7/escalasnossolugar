@@ -14,7 +14,7 @@ import { useToast } from '../context/Toast'
 import { useCategories } from '../lib/queries'
 import { KIND_LABEL, resolveItems, shareUrl, totalSeconds } from '../lib/setlist'
 import { exportSetlistPdf } from '../lib/pdf'
-import { cn, fmtDate, fmtDuration, fmtTotal } from '../lib/utils'
+import { cn, fmtDate, fmtDuration, fmtTotal, safeUrl } from '../lib/utils'
 import type { Category, EventType, ItemKind, Setlist, SetlistItem, Song } from '../types'
 import { Badge, Button, ConfirmDialog, Cover, EmptyState, Field, IconButton, Input, KeyInput, Modal, Select, Spinner } from './ui'
 import { SongPickerModal } from './SongForm'
@@ -69,8 +69,8 @@ function Row({ item, cats, readOnly, onChange, onRemove }: {
           {readOnly ? (item.category_id && <Badge>{cats.find((c) => c.id === item.category_id)?.name}</Badge>) : (
             <Select className="!w-auto !py-1.5 !text-xs" value={item.category_id ?? ''} onChange={(e) => onChange({ category_id: e.target.value || null })}>
               <option value="">Sem etapa</option>{cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>)}
-          {s?.youtube_url && <a href={s.youtube_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-accenttext"><Youtube className="h-3.5 w-3.5" />YouTube</a>}
-          {s?.spotify_url && <a href={s.spotify_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-accenttext"><Music2 className="h-3.5 w-3.5" />Spotify</a>}
+          {s?.youtube_url && <a href={safeUrl(s.youtube_url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-accenttext"><Youtube className="h-3.5 w-3.5" />YouTube</a>}
+          {s?.spotify_url && <a href={safeUrl(s.spotify_url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-accenttext"><Music2 className="h-3.5 w-3.5" />Spotify</a>}
           {!readOnly && !showNote && <button className="text-xs font-semibold text-muted hover:text-fg" onClick={() => setShowNote(true)}>+ observação</button>}
         </div>)}
       {isSong && (showNote || (readOnly && item.note)) && (
