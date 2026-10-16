@@ -40,10 +40,35 @@ async function getJson(url: string, headers: Record<string, string> = {}, tries 
 }
 const msg = (b: any) => (b?.error?.message ? String(b.error.message) : '')
 
+
+// Plano B sem login: a página pública "embed" do Spotify lista as faixas (até ~100) de qualquer playlist pública.
+async function fromSpotifyEmbed(id: string): Promise<{ tracks?: T[]; name?: string; error?: string }> {
+  try {
+    const r = await fetch(`https://open.spotify.com/embed/playlist/${id}`, { headers: { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36', 'Accept-Language': 'pt-BR,pt;q=0.9' } })
+    if (!r.ok) return { error: `página pública respondeu ${r.status}` }
+    const html = await r.text()
+    const m = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)
+    if (!m) return { error: 'página pública sem dados' }
+    const e = JSON.parse(m[1])?.props?.pageProps?.state?.data?.entity
+    const list = (e?.trackList ?? []) as any[]
+    if (!list.length) return { error: 'playlist vazia ou privada' }
+    const tracks: T[] = []
+    for (const t of list.slice(0, MAX)) {
+      const tid = String(t.uri ?? '').split(':')[2]
+      if (!t.title || !tid || String(t.uri).includes(':episode:')) continue
+      tracks.push({ title: dec(String(t.title)), artist: t.subtitle ? dec(String(t.subtitle)).replace(/\u00a0/g, ' ') : null, album: null, cover_url: null,
+        duration_seconds: t.duration ? Math.round(Number(t.duration) / 1000) : null, youtube_url: null, spotify_url: `https://open.spotify.com/track/${tid}`, source: 'spotify', ref: `spotify:${tid}` })
+    }
+    return tracks.length ? { tracks, name: e?.name ?? e?.title } : { error: 'nenhuma faixa encontrada' }
+  } catch (x) { return { error: String(x) } }
+}
+
 async function fromSpotify(uid: string, id: string): Promise<{ tracks?: T[]; name?: string; error?: string; needsConnect?: boolean }> {
-  if (!CID || !CSEC) return { error: 'Integração com Spotify ainda não configurada no servidor.' }
-  const token = await spToken(uid)
-  if (!token) return { error: 'Conecte sua conta do Spotify primeiro (botão “Criar playlist” em qualquer escala).', needsConnect: true }
+  const token = CID && CSEC ? await spToken(uid) : null
+  if (!token) {
+    const e = await fromSpotifyEmbed(id)
+    return e.tracks ? e : { error: 'Conecte sua conta do Spotify primeiro (botão “Criar playlist” em qualquer escala).', needsConnect: true }
+  }
   const h = { Authorization: `Bearer ${token}` }
   const meta = await getJson(`https://api.spotify.com/v1/playlists/${id}?fields=name`, h)
   const tracks: T[] = []
@@ -51,7 +76,11 @@ async function fromSpotify(uid: string, id: string): Promise<{ tracks?: T[]; nam
     let r = await getJson(`https://api.spotify.com/v1/playlists/${id}/items?limit=100&offset=${off}&market=BR`, h)
     if (!r.ok && r.status !== 401) r = await getJson(`https://api.spotify.com/v1/playlists/${id}/tracks?limit=100&offset=${off}&market=BR`, h)
     if (!r.ok) {
-      if (off === 0) return { error: `O Spotify não liberou a leitura desta playlist (${r.status}${msg(r.body) ? ': ' + msg(r.body) : ''}). Em apps em modo de desenvolvimento, só é possível ler playlists que são suas.` }
+      if (off === 0) {
+        const e = await fromSpotifyEmbed(id)
+        if (e.tracks) return e
+        return { error: `O Spotify não liberou a leitura desta playlist (${r.status}${msg(r.body) ? ': ' + msg(r.body) : ''}). Em apps em modo de desenvolvimento, só é possível ler playlists que são suas. Plano B também falhou: ${e.error}.` }
+      }
       break
     }
     for (const it of (r.body?.items ?? []) as any[]) {
