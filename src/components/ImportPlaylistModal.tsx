@@ -26,6 +26,14 @@ export function ImportPlaylistModal({ open, onClose }: { open: boolean; onClose:
   const [data, setData] = useState<{ name?: string; tracks: Track[] } | null>(null)
   const [sel, setSel] = useState<Set<string>>(new Set())
 
+  const reconnect = async () => {
+    setBusy(true)
+    try {
+      const { data: d, error } = await supabase.functions.invoke('spotify', { body: { action: 'connect', returnTo: window.location.pathname } })
+      if (error || !d?.url) throw new Error('Não foi possível iniciar a conexão com o Spotify.')
+      window.location.href = d.url as string
+    } catch (e) { toast.error(e); setBusy(false) }
+  }
   const reset = () => { setUrl(''); setErr(null); setData(null); setSel(new Set()) }
   const close = () => { reset(); onClose() }
 
@@ -90,7 +98,11 @@ export function ImportPlaylistModal({ open, onClose }: { open: boolean; onClose:
         <Button variant="primary" type="submit" loading={busy && !data} disabled={!url.trim()}>Ler playlist</Button>
       </form>
       <p className="mt-2 text-xs text-muted">Spotify: playlists suas (conta conectada em “Criar playlist”). YouTube: playlists públicas ou não listadas (requer a chave de API configurada).</p>
-      {err && <p className="mt-4 rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">{err}</p>}
+      {err && (
+        <div className="mt-4 rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
+          <p>{err}</p>
+          {/403/.test(err) && <Button className="mt-3" variant="outline" loading={busy} onClick={reconnect}>Reconectar Spotify (pedir permissão de leitura)</Button>}
+        </div>)}
       {data && (
         <div className="mt-4">
           <p className="mb-2 text-sm"><b>{data.name ?? 'Playlist'}</b> — {data.tracks.length} música(s): <span className="text-ok">{fresh.length} nova(s)</span>{dups ? <>, <span className="text-muted">{dups} já na biblioteca (serão ignoradas)</span></> : null}.</p>

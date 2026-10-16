@@ -12,7 +12,7 @@ const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 const CID = Deno.env.get('SPOTIFY_CLIENT_ID'), CSEC = Deno.env.get('SPOTIFY_CLIENT_SECRET')
 const REDIRECT = `${Deno.env.get('SUPABASE_URL')}/functions/v1/spotify-callback`
-const SCOPE = 'playlist-modify-private playlist-modify-public'
+const SCOPE = 'playlist-modify-private playlist-modify-public playlist-read-private playlist-read-collaborative'
 
 async function accessToken(uid: string): Promise<string | null> {
   const { data: c } = await admin.from('music_connections').select('*').eq('user_id', uid).eq('provider', 'spotify').maybeSingle()
@@ -107,11 +107,11 @@ Deno.serve(async (req) => {
     const ids = ((body.trackIds ?? []) as string[]).filter((x) => /^[A-Za-z0-9]{22}$/.test(x)).slice(0, 100)
     if (!ids.length) return json({ error: 'Nenhuma faixa selecionada.' }, 400)
     const pl = await sp(token, '/me/playlists', { method: 'POST', body: JSON.stringify({ name, public: false, description: 'Criada pelo Louvor em Escala' }) })
-    if (!pl.ok || !pl.body?.id) return json({ error: `Não foi possível criar a playlist (Spotify ${pl.status}).` }, 502)
+    if (!pl.ok || !pl.body?.id) return json({ error: `Não foi possível criar a playlist (Spotify ${pl.status}${errMsg(pl.body) ? ': ' + errMsg(pl.body) : ''}).` }, 502)
     const uris = ids.map((i) => `spotify:track:${i}`)
     let add = await sp(token, `/playlists/${pl.body.id}/items`, { method: 'POST', body: JSON.stringify({ uris }) })
     if (!add.ok) add = await sp(token, `/playlists/${pl.body.id}/tracks`, { method: 'POST', body: JSON.stringify({ uris }) })
-    if (!add.ok) return json({ error: `A playlist foi criada, mas não foi possível adicionar as faixas (Spotify ${add.status}).`, url: pl.body.external_urls?.spotify ?? null }, 502)
+    if (!add.ok) return json({ error: `A playlist foi criada, mas não foi possível adicionar as faixas (Spotify ${add.status}${errMsg(add.body) ? ': ' + errMsg(add.body) : ''}).`, url: pl.body.external_urls?.spotify ?? null }, 502)
     return json({ url: pl.body.external_urls?.spotify ?? null, added: ids.length })
   }
 
