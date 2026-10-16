@@ -208,7 +208,7 @@ export function SetlistEditor({ setlist, readOnly = false, eventType, onRenamed 
 
       <SongPickerModal open={picker} onClose={() => setPicker(false)} excludeIds={songIds} onPick={(s) => { setPicker(false); void addSong(s) }} />
       <AutoSetlistModal open={auto} onClose={() => setAuto(false)} eventType={eventType} onApply={applyAuto} />
-      <PlaylistModal open={playlist} onClose={() => setPlaylist(false)} items={resolved} />
+      <PlaylistModal open={playlist} onClose={() => setPlaylist(false)} items={resolved} name={setlist.name} />
       {player && <PlayerView title={setlist.name} items={resolved} onClose={() => setPlayer(false)} />}
       <ConfirmDialog open={confirmClear} danger title="Limpar repertório?" text="Todos os itens serão removidos deste repertório. As músicas continuam na biblioteca." confirmLabel="Limpar" onClose={() => setConfirmClear(false)} onConfirm={() => void clearAll()} />
       <Modal open={favOpen} onClose={() => setFavOpen(false)} size="sm" title="Salvar como favorito" footer={<><Button variant="ghost" onClick={() => setFavOpen(false)}>Cancelar</Button><Button variant="primary" onClick={() => void saveFav()}>Salvar</Button></>}>

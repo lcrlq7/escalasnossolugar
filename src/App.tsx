@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { useEffect, type ReactNode } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { useToast } from './context/Toast'
 import { useAuth } from './context/Auth'
 import { isConfigured } from './lib/supabase'
 import { Layout } from './components/Layout'
@@ -41,9 +42,27 @@ function NotFound() {
   return <div className="py-20 text-center"><p className="text-2xl font-extrabold">Página não encontrada</p><p className="mt-1 text-sm text-muted">O endereço não existe ou foi movido.</p></div>
 }
 
+function SpotifyReturn() {
+  const loc = useLocation()
+  const nav = useNavigate()
+  const toast = useToast()
+  useEffect(() => {
+    const p = new URLSearchParams(loc.search)
+    const v = p.get('spotify')
+    if (!v) return
+    if (v === 'ok') toast.success('Spotify conectado! Abra “Criar playlist” novamente.')
+    else toast.error('Não foi possível conectar o Spotify. Tente de novo.')
+    p.delete('spotify')
+    nav({ pathname: loc.pathname, search: p.toString() ? `?${p}` : '' }, { replace: true })
+  }, [loc.search]) // eslint-disable-line
+  return null
+}
+
 export default function App() {
   if (!isConfigured) return <ConfigMissing />
   return (
+    <>
+    <SpotifyReturn />
     <Routes>
       <Route path="/entrar" element={<Login />} />
       <Route path="/cadastro" element={<Signup />} />
@@ -70,5 +89,6 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
+    </>
   )
 }
