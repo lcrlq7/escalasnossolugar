@@ -101,7 +101,7 @@ function Suggestions() {
             <Badge tone={s.status === 'accepted' ? 'ok' : s.status === 'rejected' ? 'danger' : 'warn'}>{s.status === 'accepted' ? 'Aceita' : s.status === 'rejected' ? 'Recusada' : 'Pendente'}</Badge>
             {isLeader && s.status === 'pending' && <div className="flex gap-1.5">
               <Button variant="primary" className="!px-3 !py-1.5 text-xs" onClick={() => setAdding(s)}><Check className="h-3.5 w-3.5" />Cadastrar</Button>
-              <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => void setStatus(s.id, 'rejected')}><X className="h-3.5 w-3.5" />Recusar</Button></div>)}
+              <Button variant="ghost" className="!px-3 !py-1.5 text-xs" onClick={() => void setStatus(s.id, 'rejected')}><X className="h-3.5 w-3.5" />Recusar</Button></div>}
           </div>))}</div>)}
       <Modal open={open} onClose={() => setOpen(false)} size="sm" title="Sugerir música" footer={<><Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button><Button variant="primary" onClick={() => void send()}><Send className="h-4 w-4" />Enviar</Button></>}>
         <div className="space-y-3"><Field label="Música *"><Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></Field>
