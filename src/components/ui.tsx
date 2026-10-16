@@ -6,7 +6,11 @@ export function Spinner({ className }: { className?: string }) {
   return <Loader2 className={cn('h-5 w-5 animate-spin text-muted', className)} aria-label="Carregando" />
 }
 export function PageLoader({ label = 'Carregando…' }: { label?: string }) {
-  return <div className="flex items-center justify-center gap-3 py-20 text-muted"><Spinner /><span className="text-sm">{label}</span></div>
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 py-20 text-muted">
+      <div className="flex h-8 items-end gap-1" aria-hidden>{[0, .15, .3, .45].map((d) => <span key={d} className="h-full w-1.5 origin-bottom animate-eq rounded-full bg-accent" style={{ animationDelay: `${d}s` }} />)}</div>
+      <span className="text-sm">{label}</span>
+    </div>)
 }
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline'

@@ -109,7 +109,7 @@ function UserMenu() {
         <Avatar name={profile?.full_name ?? ''} size={34} />
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-40 w-64 rounded-2xl border border-border bg-surface p-2 shadow-card">
+        <div className="animate-pop absolute right-0 top-12 z-40 w-64 origin-top-right rounded-2xl border border-border bg-surface p-2 shadow-card">
           <div className="px-3 py-2">
             <p className="truncate text-sm font-bold">{profile?.full_name}</p>
             <p className="truncate text-xs text-muted">{profile?.email}</p>
@@ -172,20 +172,19 @@ export function Layout() {
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-surface/95 backdrop-blur safe-bottom md:hidden" aria-label="Navegação principal">
         {bottom.map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end}
-            className={({ isActive }) => cn('flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-semibold', isActive ? 'text-accenttext' : 'text-muted')}>
-            <i.icon className="h-5 w-5" />{i.label}
-          </NavLink>
+            className={({ isActive }) => cn('press flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-semibold transition-colors', isActive ? 'text-accenttext' : 'text-muted')}>
+            {({ isActive }: { isActive: boolean }) => <><i.icon className={cn('h-5 w-5', isActive && 'nav-active')} />{i.label}</>}</NavLink>
         ))}
         <button onClick={() => setDrawer(true)} className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-semibold text-muted"><Menu className="h-5 w-5" />Mais</button>
       </nav>
       {drawer && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setDrawer(false)} />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-border bg-surface p-4 safe-bottom">
+          <div className="absolute inset-0 animate-fade-in bg-black/60" onClick={() => setDrawer(false)} />
+          <div className="drawer-in absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-border bg-surface p-4 safe-bottom">
             <div className="mb-3 flex items-center justify-between"><span className="font-bold">Menu</span><IconButton label="Fechar" onClick={() => setDrawer(false)}><X className="h-5 w-5" /></IconButton></div>
             <div className="grid grid-cols-3 gap-2">
               {items.filter((i) => !bottom.includes(i)).map((i) => (
-                <NavLink key={i.to} to={i.to} className="flex flex-col items-center gap-1.5 rounded-2xl bg-surface2 px-2 py-4 text-center text-xs font-semibold"><i.icon className="h-5 w-5 text-accenttext" />{i.label}</NavLink>
+                <NavLink key={i.to} to={i.to} className="press flex flex-col items-center gap-1.5 rounded-2xl bg-surface2 px-2 py-4 text-center text-xs font-semibold"><i.icon className="h-5 w-5 text-accenttext" />{i.label}</NavLink>
               ))}
             </div>
           </div>

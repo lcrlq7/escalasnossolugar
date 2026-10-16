@@ -73,6 +73,23 @@ a.card:hover, button.card:hover, .card.lift:hover { transform: translateY(-3px);
 .btn-shine::after { content: ''; position: absolute; inset: 0; width: 40%; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .45), transparent); animation: shine 3.8s ease-in-out infinite; pointer-events: none; }
 .auth-bg { background: radial-gradient(1200px 600px at 15% -10%, rgb(var(--accent) / .16), transparent 60%), radial-gradient(900px 600px at 100% 110%, rgb(var(--info) / .14), transparent 60%), rgb(var(--bg)); }
 .glass { background: rgb(var(--surface) / .72); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+/* revelar ao rolar (navegadores com scroll-driven animations) */
+@keyframes reveal { from { opacity: 0; transform: translateY(26px) scale(.97); } to { opacity: 1; transform: none; } }
+@supports (animation-timeline: view()) {
+  main .card:not(.no-reveal) { animation: reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
+  .stagger > * { animation-delay: 0s !important; }
+}
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(var(--accent) / .55); } 100% { box-shadow: 0 0 0 14px rgb(var(--accent) / 0); } }
+.nav-active { animation: nav-pop .35s cubic-bezier(.2,.9,.3,1.4); }
+@keyframes nav-pop { 0% { transform: translateY(4px) scale(.85); } 100% { transform: none; } }
+.press { transition: transform .15s ease; } .press:active { transform: scale(.94); }
+.row-hover { transition: background-color .2s ease, transform .2s ease; } .row-hover:hover { background-color: rgb(var(--surface2) / .7); transform: translateX(3px); }
+.skeleton { background: linear-gradient(90deg, rgb(var(--surface2)) 25%, rgb(var(--border)) 50%, rgb(var(--surface2)) 75%); background-size: 200% 100%; animation: skel 1.4s ease-in-out infinite; }
+@keyframes skel { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(16px) scale(.95); } to { opacity: 1; transform: none; } }
+.toast-in { animation: toast-in .3s cubic-bezier(.2,.9,.3,1.2) both; }
+@keyframes drawer-in { from { transform: translateY(100%); } to { transform: none; } }
+.drawer-in { animation: drawer-in .32s cubic-bezier(.2,.8,.2,1) both; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
