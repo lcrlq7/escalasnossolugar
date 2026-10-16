@@ -73,4 +73,4 @@ Importe o repositório, framework *Vite*, e defina as duas variáveis de ambient
 
 ## Testes
 
-`npm run typecheck` verifica os tipos. As regras de acesso foram conferidas com consultas SQL simulando cada cargo. Teste manual sugerido: cadastrar o 1º usuário (admin), criar funções/integrantes, criar e publicar uma escala, confirmar presença com outro usuário.
+`npm run typecheck` verifica os tipos. As regras de acesso foram conferidas com consultas SQL simulando cada cargo (resumo em `supabase/tests/rls_smoke.md`). Teste manual sugerido: cadastrar o 1º usuário (admin), criar funções/integrantes, criar e publicar uma escala, confirmar presença com outro usuário.
