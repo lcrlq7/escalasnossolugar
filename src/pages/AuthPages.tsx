@@ -6,6 +6,7 @@ import { useTheme } from '../context/Theme'
 import { Button, Field, Input } from '../components/ui'
 import { useToast } from '../context/Toast'
 import { LogOut, MailCheck, Moon, Sun } from 'lucide-react'
+import { Captcha, CAPTCHA_SITEKEY } from '../components/Captcha'
 
 const NOTES = Array.from({ length: 9 }, (_, i) => ({ left: `${6 + i * 11}%`, delay: `${(i * 1.7) % 9}s`, dur: `${11 + (i % 4) * 3}s`, size: 14 + (i % 3) * 8, ch: ['♪', '♫', '♩', '♬'][i % 4] }))
 
@@ -59,13 +60,17 @@ export function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
+  const [cap, setCap] = useState<string | null>(null)
+  const [capReset, setCapReset] = useState(0)
   if (!isConfigured) return <ConfigMissing />
   if (!loading && session) return <Navigate to="/" replace />
   const submit = async (e: FormEvent) => {
-    e.preventDefault(); setBusy(true)
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+    e.preventDefault()
+    if (CAPTCHA_SITEKEY && !cap) return toast.error('Confirme que você não é um robô.')
+    setBusy(true)
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password, options: { captchaToken: cap ?? undefined } })
     setBusy(false)
-    if (error) toast.error(friendlyMessage(error.message)); else nav('/', { replace: true })
+    if (error) { toast.error(friendlyMessage(error.message)); setCapReset((n) => n + 1) } else nav('/', { replace: true })
   }
   return (
     <Shell title="Entrar" subtitle="Acesse as escalas e repertórios do ministério de louvor."
@@ -73,6 +78,7 @@ export function Login() {
       <form onSubmit={submit} className="stagger space-y-4">
         <Field label="E-mail"><Input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" /></Field>
         <Field label="Senha"><Input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" /></Field>
+        <Captcha onToken={setCap} resetKey={capReset} />
         <Button variant="primary" type="submit" loading={busy} className="btn-shine w-full">Entrar</Button>
         <div className="text-center"><Link to="/recuperar-senha" className="text-sm text-muted hover:text-fg">Esqueci minha senha</Link></div>
       </form>
@@ -88,17 +94,20 @@ export function Signup() {
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
+  const [cap, setCap] = useState<string | null>(null)
+  const [capReset, setCapReset] = useState(0)
   if (session) return <Navigate to="/" replace />
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (password.length < 6) return toast.error('A senha deve ter ao menos 6 caracteres.')
+    if (CAPTCHA_SITEKEY && !cap) return toast.error('Confirme que você não é um robô.')
     setBusy(true)
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(), password,
-      options: { data: { full_name: name.trim() }, emailRedirectTo: window.location.origin },
+      options: { data: { full_name: name.trim() }, emailRedirectTo: window.location.origin, captchaToken: cap ?? undefined },
     })
     setBusy(false)
-    if (error) return toast.error(friendlyMessage(error.message))
+    if (error) { setCapReset((n) => n + 1); return toast.error(friendlyMessage(error.message)) }
     if (!data.session) setSent(true)
   }
   if (sent) {
@@ -116,6 +125,7 @@ export function Signup() {
         <Field label="Nome completo"><Input required value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></Field>
         <Field label="E-mail"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></Field>
         <Field label="Senha" hint="Mínimo de 6 caracteres."><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" /></Field>
+        <Captcha onToken={setCap} resetKey={capReset} />
         <Button variant="primary" type="submit" loading={busy} className="w-full">Criar conta</Button>
       </form>
     </Shell>
@@ -127,11 +137,15 @@ export function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
+  const [cap, setCap] = useState<string | null>(null)
+  const [capReset, setCapReset] = useState(0)
   const submit = async (e: FormEvent) => {
-    e.preventDefault(); setBusy(true)
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/redefinir-senha` })
+    e.preventDefault()
+    if (CAPTCHA_SITEKEY && !cap) return toast.error('Confirme que você não é um robô.')
+    setBusy(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/redefinir-senha`, captchaToken: cap ?? undefined })
     setBusy(false)
-    if (error) toast.error(friendlyMessage(error.message)); else setSent(true)
+    if (error) { toast.error(friendlyMessage(error.message)); setCapReset((n) => n + 1) } else setSent(true)
   }
   return (
     <Shell title="Recuperar senha" subtitle="Enviaremos um link para você criar uma nova senha."
@@ -139,6 +153,7 @@ export function ForgotPassword() {
       {sent ? <p className="text-sm text-muted">Se o e-mail estiver cadastrado, você receberá o link em instantes. Verifique também a caixa de spam.</p> : (
         <form onSubmit={submit} className="space-y-4">
           <Field label="E-mail"><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
+          <Captcha onToken={setCap} resetKey={capReset} />
           <Button variant="primary" type="submit" loading={busy} className="w-full">Enviar link</Button>
         </form>)}
     </Shell>
