@@ -76,7 +76,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLeader: roles.includes('admin') || roles.includes('leader'),
     isTech: roles.includes('admin') || roles.includes('sound_tech'),
     refresh: async () => { await load(session?.user.id ?? null) },
-    signOut: async () => { await supabase.auth.signOut(); setRecovery(false) },
+    signOut: async () => {
+      setRecovery(false)
+      // Encerra a sessão local na hora (não depende de rede) e revoga no servidor em segundo plano.
+      try { await Promise.race([supabase.auth.signOut({ scope: 'local' }), new Promise((r) => setTimeout(r, 1500))]) } catch { /* ignora */ }
+      try { Object.keys(localStorage).filter((k) => k.startsWith('sb-')).forEach((k) => localStorage.removeItem(k)) } catch { /* ignora */ }
+      window.location.replace('/entrar')
+    },
   }), [loading, session, profile, roles, church, member, recovery, load])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
