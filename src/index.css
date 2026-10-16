@@ -60,8 +60,8 @@ input, select, textarea, button { font: inherit; }
 }
 
 /* ---- Movimento ---- */
-.page-enter { animation: fade-up .45s cubic-bezier(.2,.8,.2,1) both; }
-.stagger > * { animation: fade-up .5s cubic-bezier(.2,.8,.2,1) both; }
+.page-enter { animation: fade-up .45s cubic-bezier(.2,.8,.2,1) backwards; }
+.stagger > * { animation: fade-up .5s cubic-bezier(.2,.8,.2,1) backwards; }
 .stagger > *:nth-child(1) { animation-delay: .04s } .stagger > *:nth-child(2) { animation-delay: .09s }
 .stagger > *:nth-child(3) { animation-delay: .14s } .stagger > *:nth-child(4) { animation-delay: .19s }
 .stagger > *:nth-child(5) { animation-delay: .24s } .stagger > *:nth-child(6) { animation-delay: .29s }
@@ -76,7 +76,7 @@ a.card:hover, button.card:hover, .card.lift:hover { transform: translateY(-3px);
 /* revelar ao rolar (navegadores com scroll-driven animations) */
 @keyframes reveal { from { opacity: 0; transform: translateY(26px) scale(.97); } to { opacity: 1; transform: none; } }
 @supports (animation-timeline: view()) {
-  main .card:not(.no-reveal) { animation: reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
+  main .card:not(.no-reveal) { animation: reveal linear backwards; animation-timeline: view(); animation-range: entry 0% entry 55%; }
   .stagger > * { animation-delay: 0s !important; }
 }
 @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(var(--accent) / .55); } 100% { box-shadow: 0 0 0 14px rgb(var(--accent) / 0); } }
@@ -87,9 +87,9 @@ a.card:hover, button.card:hover, .card.lift:hover { transform: translateY(-3px);
 .skeleton { background: linear-gradient(90deg, rgb(var(--surface2)) 25%, rgb(var(--border)) 50%, rgb(var(--surface2)) 75%); background-size: 200% 100%; animation: skel 1.4s ease-in-out infinite; }
 @keyframes skel { from { background-position: 200% 0 } to { background-position: -200% 0 } }
 @keyframes toast-in { from { opacity: 0; transform: translateY(16px) scale(.95); } to { opacity: 1; transform: none; } }
-.toast-in { animation: toast-in .3s cubic-bezier(.2,.9,.3,1.2) both; }
+.toast-in { animation: toast-in .3s cubic-bezier(.2,.9,.3,1.2) backwards; }
 @keyframes drawer-in { from { transform: translateY(100%); } to { transform: none; } }
-.drawer-in { animation: drawer-in .32s cubic-bezier(.2,.8,.2,1) both; }
+.drawer-in { animation: drawer-in .32s cubic-bezier(.2,.8,.2,1) backwards; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }

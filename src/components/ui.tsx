@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { createPortal } from 'react-dom'
 import { Loader2, X, Inbox } from 'lucide-react'
 import { cn } from '../lib/utils'
 
@@ -123,7 +124,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }:
   }, [open, onClose])
   if (!open) return null
   const w = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl', xl: 'max-w-5xl' }[size]
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 animate-fade-in bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className={cn('relative flex max-h-[92dvh] w-full animate-sheet flex-col rounded-t-3xl md:animate-pop border border-border bg-surface shadow-card md:rounded-2xl', w)}>
@@ -134,7 +135,8 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }:
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-border px-5 py-3 safe-bottom">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
