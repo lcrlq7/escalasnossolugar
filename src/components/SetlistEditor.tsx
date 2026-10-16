@@ -6,7 +6,7 @@ import {
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
-  Copy, FileDown, GripVertical, HandHeart, Link2, ListPlus, MessageSquare, Music2, Play, Plus, Shuffle, Star, Trash2, Wand2, Youtube,
+  Copy, FileDown, GripVertical, HandHeart, Link2, ListPlus, MessageSquare, Music2, ListVideo, Play, Plus, Shuffle, Star, Trash2, Wand2, Youtube,
 } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
@@ -20,6 +20,7 @@ import { Badge, Button, ConfirmDialog, Cover, EmptyState, Field, IconButton, Inp
 import { SongPickerModal } from './SongForm'
 import { AutoSetlistModal } from './AutoSetlistModal'
 import { PlayerView } from './PlayerView'
+import { PlaylistModal } from './PlaylistModal'
 
 function Row({ item, cats, readOnly, onChange, onRemove }: {
   item: SetlistItem; cats: Category[]; readOnly: boolean
@@ -89,6 +90,7 @@ export function SetlistEditor({ setlist, readOnly = false, eventType, onRenamed 
   const [picker, setPicker] = useState(false)
   const [auto, setAuto] = useState(false)
   const [player, setPlayer] = useState(false)
+  const [playlist, setPlaylist] = useState(false)
   const [copyOpen, setCopyOpen] = useState(false)
   const [favOpen, setFavOpen] = useState(false)
   const [favName, setFavName] = useState('')
@@ -180,6 +182,7 @@ export function SetlistEditor({ setlist, readOnly = false, eventType, onRenamed 
           {!readOnly && <IconButton label="Salvar como repertório favorito" onClick={() => { setFavName(setlist.name); setFavOpen(true) }}><Star className="h-[18px] w-[18px]" /></IconButton>}
           <IconButton label="Copiar link de visualização" onClick={copyLink}><Link2 className="h-[18px] w-[18px]" /></IconButton>
           <IconButton label="Exportar PDF" disabled={!order.length} onClick={() => exportSetlistPdf({ church: church?.name ?? '', title: setlist.name, items: resolved })}><FileDown className="h-[18px] w-[18px]" /></IconButton>
+          <Button variant="outline" disabled={!order.length} onClick={() => setPlaylist(true)}><ListVideo className="h-4 w-4" />Criar playlist</Button>
           <Button variant="outline" disabled={!order.length} onClick={() => setPlayer(true)}><Play className="h-4 w-4" />Reproduzir</Button>
         </div>
       </div>
@@ -205,6 +208,7 @@ export function SetlistEditor({ setlist, readOnly = false, eventType, onRenamed 
 
       <SongPickerModal open={picker} onClose={() => setPicker(false)} excludeIds={songIds} onPick={(s) => { setPicker(false); void addSong(s) }} />
       <AutoSetlistModal open={auto} onClose={() => setAuto(false)} eventType={eventType} onApply={applyAuto} />
+      <PlaylistModal open={playlist} onClose={() => setPlaylist(false)} items={resolved} />
       {player && <PlayerView title={setlist.name} items={resolved} onClose={() => setPlayer(false)} />}
       <ConfirmDialog open={confirmClear} danger title="Limpar repertório?" text="Todos os itens serão removidos deste repertório. As músicas continuam na biblioteca." confirmLabel="Limpar" onClose={() => setConfirmClear(false)} onConfirm={() => void clearAll()} />
       <Modal open={favOpen} onClose={() => setFavOpen(false)} size="sm" title="Salvar como favorito" footer={<><Button variant="ghost" onClick={() => setFavOpen(false)}>Cancelar</Button><Button variant="primary" onClick={() => void saveFav()}>Salvar</Button></>}>
