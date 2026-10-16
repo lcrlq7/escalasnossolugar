@@ -41,6 +41,24 @@ async function getJson(url: string, headers: Record<string, string> = {}, tries 
 const msg = (b: any) => (b?.error?.message ? String(b.error.message) : '')
 
 
+
+// Capa de uma faixa pelo oEmbed público do Spotify (sem login).
+async function oembedCover(url: string): Promise<string | null> {
+  try {
+    const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`)
+    if (!r.ok) return null
+    const j = await r.json()
+    return typeof j?.thumbnail_url === 'string' ? j.thumbnail_url : null
+  } catch { return null }
+}
+async function coversFor(urls: string[]): Promise<Record<string, string>> {
+  const out: Record<string, string> = {}
+  for (let i = 0; i < urls.length; i += 10) {
+    await Promise.all(urls.slice(i, i + 10).map(async (u) => { const c = await oembedCover(u); if (c) out[u] = c }))
+  }
+  return out
+}
+
 // Plano B sem login: a página pública "embed" do Spotify lista as faixas (até ~100) de qualquer playlist pública.
 async function fromSpotifyEmbed(id: string): Promise<{ tracks?: T[]; name?: string; error?: string }> {
   try {
@@ -59,7 +77,10 @@ async function fromSpotifyEmbed(id: string): Promise<{ tracks?: T[]; name?: stri
       tracks.push({ title: dec(String(t.title)), artist: t.subtitle ? dec(String(t.subtitle)).replace(/\u00a0/g, ' ') : null, album: null, cover_url: null,
         duration_seconds: t.duration ? Math.round(Number(t.duration) / 1000) : null, youtube_url: null, spotify_url: `https://open.spotify.com/track/${tid}`, source: 'spotify', ref: `spotify:${tid}` })
     }
-    return tracks.length ? { tracks, name: e?.name ?? e?.title } : { error: 'nenhuma faixa encontrada' }
+    if (!tracks.length) return { error: 'nenhuma faixa encontrada' }
+    const cv = await coversFor(tracks.filter((t) => !t.cover_url && t.spotify_url).map((t) => t.spotify_url!))
+    for (const t of tracks) if (!t.cover_url && t.spotify_url) t.cover_url = cv[t.spotify_url] ?? e?.coverArt?.sources?.[0]?.url ?? null
+    return { tracks, name: e?.name ?? e?.title }
   } catch (x) { return { error: String(x) } }
 }
 
@@ -146,7 +167,13 @@ Deno.serve(async (req) => {
   const { data: ok } = await admin.from('user_roles').select('role').eq('user_id', uid).in('role', ['admin', 'leader']).limit(1)
   if (!ok?.length) return json({ error: 'Apenas líderes e administradores podem importar playlists.' }, 403)
   let url = ''
-  try { url = String((await req.json()).url ?? '').trim().slice(0, 400) } catch { return json({ error: 'Requisição inválida' }, 400) }
+  let reqBody: any = {}
+  try { reqBody = await req.json() } catch { return json({ error: 'Requisição inválida' }, 400) }
+  if (Array.isArray(reqBody.covers)) {
+    const urls = (reqBody.covers as unknown[]).filter((x): x is string => typeof x === 'string' && /^https:\/\/open\.spotify\.com\/track\/[A-Za-z0-9]{22}/.test(x)).slice(0, 120)
+    return json({ covers: await coversFor(urls) })
+  }
+  url = String(reqBody.url ?? '').trim().slice(0, 400)
 
   const sp = url.match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?playlist\/([A-Za-z0-9]{22})/)
   if (sp) return json({ provider: 'spotify', ...(await fromSpotify(uid, sp[1])) })

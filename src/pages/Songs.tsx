@@ -129,6 +129,26 @@ export default function Songs() {
   const [tag, setTag] = useState('')
   const [add, setAdd] = useState(false)
   const [imp, setImp] = useState(false)
+  const [cov, setCov] = useState(false)
+  const missingCovers = useMemo(() => (songs.data ?? []).filter((x) => !x.cover_url && /open\.spotify\.com\/track\//.test(x.spotify_url ?? '')), [songs.data])
+  const fetchCovers = async () => {
+    setCov(true)
+    try {
+      let done = 0
+      for (let i = 0; i < missingCovers.length; i += 40) {
+        const part = missingCovers.slice(i, i + 40)
+        const { data, error } = await supabase.functions.invoke('playlist-import', { body: { covers: part.map((x) => x.spotify_url) } })
+        if (error) throw error
+        const map = (data?.covers ?? {}) as Record<string, string>
+        for (const sg of part) {
+          const c = map[sg.spotify_url as string]
+          if (c) { const { error: e2 } = await supabase.from('songs').update({ cover_url: c }).eq('id', sg.id); if (!e2) done++ }
+        }
+      }
+      qc.invalidateQueries({ queryKey: ['songs'] })
+      toast.success(`${done} capa(s) atualizada(s).`)
+    } catch (e) { toast.error(e) } finally { setCov(false) }
+  }
   const [view, setView] = useState<Song | null>(null)
   const [edit, setEdit] = useState<Song | null>(null)
 
@@ -154,7 +174,7 @@ export default function Songs() {
   return (
     <div>
       <PageHeader title="Músicas" subtitle="Biblioteca do ministério: letras, tons, links e histórico de uso."
-        actions={isLeader && tab === 'lib' && <><Button variant="outline" onClick={() => setImp(true)}>Importar playlist</Button><Button variant="primary" onClick={() => setAdd(true)}><Plus className="h-4 w-4" />Adicionar música</Button></>} />
+        actions={isLeader && tab === 'lib' && <><Button variant="outline" onClick={() => setImp(true)}>Importar playlist</Button>{missingCovers.length > 0 && <Button variant="outline" loading={cov} onClick={fetchCovers}>Buscar capas ({missingCovers.length})</Button>}<Button variant="primary" onClick={() => setAdd(true)}><Plus className="h-4 w-4" />Adicionar música</Button></>} />
       <Tabs value={tab === 'sug' ? 'sug' : 'lib'} onChange={(v) => setSp(v === 'sug' ? { aba: 'sugestoes' } : {})} items={[{ value: 'lib', label: 'Biblioteca', count: (songs.data ?? []).filter((s) => !s.archived).length }, { value: 'sug', label: 'Sugestões' }]} />
       {tab === 'sug' ? <Suggestions /> : (<>
         <div className="mb-4 flex flex-wrap gap-2">
