@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 246 246 243;
+  --surface: 255 255 255;
+  --surface2: 239 239 235;
+  --border: 224 224 217;
+  --fg: 24 24 27;
+  --muted: 107 107 115;
+  --accent: 249 199 0;
+  --accent-fg: 17 17 17;
+  --accent-text: 133 100 0;
+  --ok: 22 130 74;
+  --warn: 180 110 0;
+  --danger: 200 40 40;
+  --info: 40 100 200;
+  color-scheme: light;
+}
+.dark {
+  --bg: 18 18 20;
+  --surface: 27 27 31;
+  --surface2: 37 37 42;
+  --border: 52 52 59;
+  --fg: 244 244 245;
+  --muted: 154 154 163;
+  --accent: 249 199 0;
+  --accent-fg: 17 17 17;
+  --accent-text: 249 199 0;
+  --ok: 74 200 130;
+  --warn: 245 170 50;
+  --danger: 245 100 100;
+  --info: 110 160 250;
+  color-scheme: dark;
+}
+
+html, body, #root { height: 100%; }
+body {
+  @apply bg-bg text-fg font-sans antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+* { scrollbar-width: thin; scrollbar-color: rgb(var(--border)) transparent; }
+:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; }
+input, select, textarea, button { font: inherit; }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+@layer components {
+  .field {
+    @apply w-full rounded-xl border border-border bg-surface2/60 px-3.5 py-2.5 text-sm text-fg placeholder:text-muted
+           transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 disabled:opacity-60;
+  }
+  .card { @apply rounded-2xl border border-border bg-surface shadow-card; }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
+           disabled:cursor-not-allowed disabled:opacity-50 active:scale-[.98];
+  }
+}
+
+/* ---- FullCalendar integrado ao tema ---- */
+.fc { --fc-border-color: rgb(var(--border)); --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: rgb(var(--surface2)); --fc-list-event-hover-bg-color: rgb(var(--surface2));
+  --fc-today-bg-color: rgb(var(--accent) / .12); --fc-event-border-color: transparent; font-size: .85rem; }
+.fc .fc-toolbar-title { font-size: 1.1rem; font-weight: 700; text-transform: capitalize; }
+.fc .fc-button { background: rgb(var(--surface2)); border: 1px solid rgb(var(--border)); color: rgb(var(--fg));
+  text-transform: capitalize; border-radius: .7rem; padding: .4rem .7rem; box-shadow: none !important; }
+.fc .fc-button:hover { background: rgb(var(--border)); }
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active { background: rgb(var(--accent)); color: rgb(var(--accent-fg)); border-color: transparent; }
+.fc .fc-col-header-cell-cushion, .fc .fc-daygrid-day-number, .fc .fc-list-day-text, .fc .fc-list-day-side-text { color: rgb(var(--fg)); text-decoration: none; }
+.fc .fc-event { cursor: pointer; border-radius: .45rem; padding: 1px 3px; font-weight: 600; }
+.fc .fc-daygrid-day.fc-day-other .fc-daygrid-day-number { opacity: .4; }
+.fc-theme-standard .fc-scrollgrid { border-radius: .9rem; overflow: hidden; }
+.fc .fc-list-event td { background: transparent; color: rgb(var(--fg)); }
+@media (max-width: 640px) {
+  .fc .fc-toolbar { flex-direction: column; gap: .5rem; }
+}
+
+/* ---- Modo palco ---- */
+.stage-text { font-size: clamp(1.5rem, 6vw, 3rem); line-height: 1.15; }
+@media print { .no-print { display: none !important; } }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* Recharts integrado ao tema */
+.recharts-cartesian-axis-tick-value, .recharts-legend-item-text, .recharts-pie-label-text { fill: rgb(var(--muted)) !important; font-size: 12px; }
+.recharts-cartesian-grid line { stroke: rgb(var(--border)); }
+.recharts-tooltip-cursor { fill: rgb(var(--surface2) / .6); }

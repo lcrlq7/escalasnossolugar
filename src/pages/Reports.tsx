@@ -1,0 +1,111 @@
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from 'recharts'
+import { AlertTriangle } from 'lucide-react'
+import { supabase, unwrap } from '../lib/supabase'
+import { useSongs } from '../lib/queries'
+import { useSongUsage, countBy } from '../lib/usage'
+import { addDays, fmtDate, todayStr } from '../lib/utils'
+import type { Alert, ResponseStatus } from '../types'
+import { Badge, Card, EmptyState, Field, Input, PageHeader, PageLoader, SectionTitle } from '../components/ui'
+
+const C = { accent: '#F9C700', blue: '#5B9BF0', green: '#4AC882', red: '#F56464', amber: '#F5AA32', grey: '#8A8A94' }
+const tip = { contentStyle: { background: 'rgb(var(--surface))', border: '1px solid rgb(var(--border))', borderRadius: 12, color: 'rgb(var(--fg))' }, labelStyle: { color: 'rgb(var(--fg))', fontWeight: 700 } }
+
+interface Ev { id: string; title: string; event_date: string; status: string; event_assignments: { status: ResponseStatus; member_id: string; member: { full_name: string } | { full_name: string }[] | null; function: { name: string } | { name: string }[] | null }[] }
+const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v)
+
+export default function Reports() {
+  const [from, setFrom] = useState(addDays(todayStr(), -90))
+  const [to, setTo] = useState(todayStr())
+  const songs = useSongs()
+  const usage = useSongUsage(from, to)
+  const evs = useQuery({
+    queryKey: ['report-events', from, to],
+    queryFn: async () => unwrap(await supabase.from('events').select('id, title, event_date, status, event_assignments(status, member_id, member:members(full_name), function:worship_functions(name))')
+      .gte('event_date', from).lte('event_date', to).in('status', ['published', 'completed']).order('event_date', { ascending: false })) as unknown as Ev[],
+  })
+  const pend = useQuery({
+    queryKey: ['report-pending'],
+    queryFn: async () => (unwrap(await supabase.rpc('upcoming_event_alerts', { p_from: todayStr(), p_to: addDays(todayStr(), 60) })) ?? []) as { event_id: string; title: string; event_date: string; alerts: Alert[] }[],
+  })
+
+  const d = useMemo(() => {
+    const rows = (evs.data ?? []).flatMap((e) => e.event_assignments.map((a) => ({ e, a, name: one(a.member)?.full_name ?? '—', fn: one(a.function)?.name ?? '—' })))
+    const per = new Map<string, { name: string; events: Set<string>; confirmed: number; declined: number; pending: number }>()
+    for (const r of rows) {
+      const p = per.get(r.a.member_id) ?? { name: r.name, events: new Set<string>(), confirmed: 0, declined: 0, pending: 0 }
+      p.events.add(r.e.id); p[r.a.status]++
+      per.set(r.a.member_id, p)
+    }
+    const members = [...per.values()].map((p) => ({ name: p.name, escalas: p.events.size, confirmadas: p.confirmed, recusadas: p.declined, pendentes: p.pending, taxa: p.confirmed + p.declined + p.pending ? Math.round((p.confirmed / (p.confirmed + p.declined + p.pending)) * 100) : 0 })).sort((a, b) => b.escalas - a.escalas)
+    const fnCount = [...countBy(rows, (r) => r.fn).entries()].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n)
+    const conf = { confirmed: rows.filter((r) => r.a.status === 'confirmed').length, pending: rows.filter((r) => r.a.status === 'pending').length, declined: rows.filter((r) => r.a.status === 'declined').length }
+    return { members, fnCount, conf, total: rows.length }
+  }, [evs.data])
+
+  const songUse = useMemo(() => {
+    const m = countBy(usage.data ?? [], (r) => r.song_id)
+    const top = [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id, n]) => ({ name: (usage.data ?? []).find((r) => r.song_id === id)!.title, n }))
+    const rare = (songs.data ?? []).filter((s) => !s.archived && (m.get(s.id) ?? 0) === 0)
+    return { top, rare }
+  }, [usage.data, songs.data])
+
+  const pie = [{ name: 'Confirmados', value: d.conf.confirmed, c: C.green }, { name: 'Aguardando', value: d.conf.pending, c: C.amber }, { name: 'Recusaram', value: d.conf.declined, c: C.red }].filter((x) => x.value > 0)
+  const loading = evs.isLoading || usage.isLoading
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Relatórios" subtitle="Dados reais das escalas publicadas e concluídas no período." />
+      <Card className="flex flex-wrap items-end gap-4 p-4">
+        <Field label="De"><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
+        <Field label="Até"><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
+        <div className="flex gap-2 pb-0.5">{[['30 dias', 30], ['90 dias', 90], ['1 ano', 365]].map(([l, n]) => <button key={l as string} onClick={() => { setFrom(addDays(todayStr(), -(n as number))); setTo(todayStr()) }} className="rounded-lg bg-surface2 px-3 py-2 text-xs font-semibold hover:bg-border">{l}</button>)}</div>
+      </Card>
+      {loading ? <PageLoader /> : (evs.data ?? []).length === 0 ? <EmptyState title="Sem dados neste período" text="Os relatórios consideram escalas publicadas ou concluídas. Ajuste o período ou publique escalas." /> : (<>
+        <div className="grid gap-4 sm:grid-cols-4">
+          {[['Cultos no período', evs.data!.length], ['Participações', d.total], ['Integrantes escalados', d.members.length], ['Taxa de confirmação', d.total ? `${Math.round((d.conf.confirmed / d.total) * 100)}%` : '–']].map(([l, v]) => (
+            <Card key={l as string} className="p-4"><p className="text-2xl font-extrabold">{v}</p><p className="text-xs text-muted">{l}</p></Card>))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="p-5"><SectionTitle title="Escalas por integrante" />
+            <ResponsiveContainer width="100%" height={Math.max(220, d.members.slice(0, 12).length * 34)}>
+              <BarChart data={d.members.slice(0, 12)} layout="vertical" margin={{ left: 8, right: 16 }}><CartesianGrid horizontal={false} /><XAxis type="number" allowDecimals={false} /><YAxis type="category" dataKey="name" width={110} /><Tooltip {...tip} /><Bar dataKey="escalas" name="Escalas" fill={C.accent} radius={[0, 6, 6, 0]} /></BarChart>
+            </ResponsiveContainer></Card>
+          <Card className="p-5"><SectionTitle title="Taxa de confirmação" />
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart><Pie data={pie} dataKey="value" nameKey="name" innerRadius={60} outerRadius={95} paddingAngle={2}>{pie.map((p) => <Cell key={p.name} fill={p.c} />)}</Pie><Tooltip {...tip} /><Legend /></PieChart>
+            </ResponsiveContainer></Card>
+          <Card className="p-5"><SectionTitle title="Participação por função" />
+            <ResponsiveContainer width="100%" height={Math.max(220, d.fnCount.length * 34)}>
+              <BarChart data={d.fnCount} layout="vertical" margin={{ left: 8, right: 16 }}><CartesianGrid horizontal={false} /><XAxis type="number" allowDecimals={false} /><YAxis type="category" dataKey="name" width={120} /><Tooltip {...tip} /><Bar dataKey="n" name="Participações" fill={C.blue} radius={[0, 6, 6, 0]} /></BarChart>
+            </ResponsiveContainer></Card>
+          <Card className="p-5"><SectionTitle title="Músicas mais utilizadas" />
+            {songUse.top.length === 0 ? <p className="text-sm text-muted">Nenhuma música usada no período.</p> : (
+              <ResponsiveContainer width="100%" height={Math.max(220, songUse.top.length * 34)}>
+                <BarChart data={songUse.top} layout="vertical" margin={{ left: 8, right: 16 }}><CartesianGrid horizontal={false} /><XAxis type="number" allowDecimals={false} /><YAxis type="category" dataKey="name" width={130} /><Tooltip {...tip} /><Bar dataKey="n" name="Vezes" fill={C.accent} radius={[0, 6, 6, 0]} /></BarChart>
+              </ResponsiveContainer>)}</Card>
+        </div>
+
+        <Card className="overflow-x-auto p-5"><SectionTitle title="Frequência e confirmação por integrante" />
+          <table className="w-full min-w-[34rem] text-sm"><thead><tr className="border-b border-border text-left text-xs uppercase text-muted"><th className="py-2">Integrante</th><th>Escalas</th><th>Confirmadas</th><th>Recusadas</th><th>Aguardando</th><th>Taxa</th></tr></thead>
+            <tbody>{d.members.map((m) => <tr key={m.name} className="border-b border-border/60 last:border-0"><td className="py-2 font-semibold">{m.name}</td><td>{m.escalas}</td><td>{m.confirmadas}</td><td>{m.recusadas}</td><td>{m.pendentes}</td><td><Badge tone={m.taxa >= 80 ? 'ok' : m.taxa >= 50 ? 'warn' : 'danger'}>{m.taxa}%</Badge></td></tr>)}</tbody></table></Card>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="p-5"><SectionTitle title="Músicas pouco utilizadas" subtitle="Cadastradas e sem uso no período" />
+            {songUse.rare.length === 0 ? <p className="text-sm text-muted">Todas as músicas foram usadas no período.</p> : <div className="flex max-h-64 flex-wrap gap-1.5 overflow-y-auto">{songUse.rare.slice(0, 80).map((s) => <Badge key={s.id}>{s.title}</Badge>)}</div>}</Card>
+          <Card className="p-5"><SectionTitle title="Repertórios anteriores" />
+            <ul className="max-h-64 space-y-1.5 overflow-y-auto text-sm">{[...new Map((usage.data ?? []).map((u) => [u.event_id, u])).values()].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20).map((u) => (
+              <li key={u.event_id} className="flex justify-between gap-3"><Link to={`/escalas/${u.event_id}`} className="truncate font-semibold hover:underline">{u.event_title}</Link><span className="shrink-0 text-muted">{fmtDate(u.date)} · {(usage.data ?? []).filter((x) => x.event_id === u.event_id).length} músicas</span></li>))}</ul></Card>
+        </div>
+      </>)}
+
+      <Card className="p-5"><SectionTitle title="Escalas com pendências" subtitle="Próximos 60 dias" />
+        {(pend.data ?? []).length === 0 ? <p className="text-sm text-ok">Nenhuma pendência encontrada.</p> : (
+          <ul className="space-y-2">{pend.data!.map((r) => (
+            <li key={r.event_id}><Link to={`/escalas/${r.event_id}/editar`} className="flex items-start gap-2.5 rounded-xl border border-border p-3 hover:bg-surface2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
+              <div><p className="text-sm font-semibold">{r.title} · {fmtDate(r.event_date)}</p><p className="text-xs text-muted">{r.alerts.map((a) => a.message).join(' · ')}</p></div></Link></li>))}</ul>)}</Card>
+    </div>
+  )
+}
