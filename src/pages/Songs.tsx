@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Archive, Check, ExternalLink, Heart, Lightbulb, Music2, Pencil, Plus, Search, Send, Trash2, X, Youtube } from 'lucide-react'
+import { Archive, Check, Download, ExternalLink, Heart, Lightbulb, Music2, Pencil, Plus, Search, Send, Trash2, X, Youtube } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
@@ -131,6 +131,17 @@ export default function Songs() {
   const [imp, setImp] = useState(false)
   const [cov, setCov] = useState(false)
   const [shown, setShown] = useState(60)
+  const exportCsv = () => {
+    const esc = (v: unknown) => { let t = String(v ?? ''); if (/^[=+\-@\t\r]/.test(t)) t = `'${t}`; return `"${t.replace(/"/g, '""')}"` }
+    const head = ['Título', 'Artista', 'Tom original', 'Tom na igreja', 'BPM', 'Duração (s)', 'Tags', 'Habitual', 'Arquivada', 'Spotify', 'YouTube']
+    const rows = (songs.data ?? []).map((x) => [x.title, x.artist, x.original_key, x.church_key, x.bpm, x.duration_seconds, (x.tags ?? []).join('; '), x.is_habitual ? 'sim' : 'não', x.archived ? 'sim' : 'não', x.spotify_url, x.youtube_url])
+    const csv = '\uFEFF' + [head, ...rows].map((r) => r.map(esc).join(';')).join('\r\n')
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    a.download = `repertorio-${todayStr()}.csv`
+    document.body.appendChild(a); a.click(); a.remove()
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+  }
   const missingCovers = useMemo(() => (songs.data ?? []).filter((x) => !x.cover_url && /open\.spotify\.com\/track\//.test(x.spotify_url ?? '')), [songs.data])
   const fetchCovers = async () => {
     setCov(true)
@@ -175,7 +186,7 @@ export default function Songs() {
   return (
     <div>
       <PageHeader title="Músicas" subtitle="Biblioteca do ministério: letras, tons, links e histórico de uso."
-        actions={isLeader && tab === 'lib' && <div className="flex w-full flex-wrap gap-2 [&>.btn]:flex-1 sm:w-auto sm:[&>.btn]:flex-none"><Button variant="outline" onClick={() => setImp(true)}>Importar playlist</Button>{missingCovers.length > 0 && <Button variant="outline" loading={cov} onClick={fetchCovers}>Buscar capas ({missingCovers.length})</Button>}<Button variant="primary" onClick={() => setAdd(true)}><Plus className="h-4 w-4" />Adicionar música</Button></div>} />
+        actions={isLeader && tab === 'lib' && <div className="flex w-full flex-wrap gap-2 [&>.btn]:flex-1 sm:w-auto sm:[&>.btn]:flex-none"><Button variant="outline" onClick={() => setImp(true)}>Importar playlist</Button><Button variant="outline" onClick={exportCsv}><Download className="h-4 w-4" />Exportar</Button>{missingCovers.length > 0 && <Button variant="outline" loading={cov} onClick={fetchCovers}>Buscar capas ({missingCovers.length})</Button>}<Button variant="primary" onClick={() => setAdd(true)}><Plus className="h-4 w-4" />Adicionar música</Button></div>} />
       <Tabs value={tab === 'sug' ? 'sug' : 'lib'} onChange={(v) => setSp(v === 'sug' ? { aba: 'sugestoes' } : {})} items={[{ value: 'lib', label: 'Biblioteca', count: (songs.data ?? []).filter((s) => !s.archived).length }, { value: 'sug', label: 'Sugestões' }]} />
       {isLeader && tab !== 'sug' && <Fab label="Adicionar música" onClick={() => setAdd(true)}><Plus className="h-6 w-6" /></Fab>}
       {tab === 'sug' ? <Suggestions /> : (<>

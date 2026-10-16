@@ -1,13 +1,13 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CheckCircle2, Clock, Info, XCircle, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Clock, Info, Sparkles, XCircle, X } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useFunctions, useMembers } from '../lib/queries'
 import { useToast } from '../context/Toast'
 import { cn, RESPONSE_LABEL } from '../lib/utils'
 import type { Alert, EventRow, ResponseStatus } from '../types'
 import type { AssignmentFull } from '../lib/events'
-import { Badge, Select } from './ui'
+import { Badge, Button, Modal, Select } from './ui'
 
 export function StatusIcon({ status, className }: { status: ResponseStatus; className?: string }) {
   if (status === 'confirmed') return <CheckCircle2 className={cn('h-4 w-4 text-ok', className)} aria-label="Confirmado" />
@@ -54,11 +54,38 @@ export function TeamEditor({ event, assignments }: { event: EventRow; assignment
   const remove = async (id: string) => {
     try { unwrap(await supabase.from('event_assignments').delete().eq('id', id).select()); refresh() } catch (e) { toast.error(e) }
   }
+  const [sug, setSug] = useState<{ function_id: string; function_name: string; member_id: string; member_name: string; reason: string }[] | null>(null)
+  const [pick, setPick] = useState<Set<string>>(new Set())
+  const [busy, setBusy] = useState(false)
+  const suggest = async () => {
+    setBusy(true)
+    try {
+      const r = (unwrap(await supabase.rpc('suggest_team', { p_event: event.id })) ?? []) as unknown as NonNullable<typeof sug>
+      if (r.length === 0) toast.info('Nenhuma sugestão: todas as funções já têm alguém, ou não há integrantes disponíveis habilitados.')
+      else { setSug(r); setPick(new Set(r.map((x) => x.function_id))) }
+    } catch (e) { toast.error(e) } finally { setBusy(false) }
+  }
+  const apply = async () => {
+    const rows = (sug ?? []).filter((x) => pick.has(x.function_id)).map((x) => ({ event_id: event.id, member_id: x.member_id, function_id: x.function_id }))
+    if (!rows.length) { setSug(null); return }
+    setBusy(true)
+    try { unwrap(await supabase.from('event_assignments').insert(rows).select()); toast.success(`${rows.length} integrante(s) adicionados.`); setSug(null); refresh() }
+    catch (e) { toast.error(e) } finally { setBusy(false) }
+  }
   const activeMembers = (members.data ?? []).filter((m) => m.active)
   const list = (fns.data ?? []).filter((f) => f.active)
 
   return (
     <div className="space-y-2.5">
+      <div className="flex justify-end"><Button size="sm" loading={busy && !sug} onClick={() => void suggest()}><Sparkles className="h-4 w-4" />Sugerir equipe</Button></div>
+      <Modal open={!!sug} onClose={() => setSug(null)} title="Sugestão de equipe"
+        footer={<><Button variant="ghost" onClick={() => setSug(null)}>Cancelar</Button><Button variant="primary" loading={busy} onClick={() => void apply()}>Adicionar selecionados</Button></>}>
+        <p className="mb-3 text-sm text-muted">Montada pelo rodízio: quem serviu menos nos últimos 30 dias e há mais tempo sem servir, só entre quem está habilitado na função, disponível e sem conflito de horário.</p>
+        <ul className="space-y-2">{(sug ?? []).map((x) => (
+          <li key={x.function_id}><label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-3">
+            <input type="checkbox" className="mt-1 h-4 w-4 accent-[rgb(var(--accent))]" checked={pick.has(x.function_id)} onChange={() => setPick((p) => { const n = new Set(p); if (n.has(x.function_id)) n.delete(x.function_id); else n.add(x.function_id); return n })} />
+            <span className="text-sm"><b>{x.function_name}:</b> {x.member_name}<span className="block text-xs text-muted">{x.reason}</span></span></label></li>))}</ul>
+      </Modal>
       {list.map((f) => {
         const here = assignments.filter((a) => a.function_id === f.id)
         const ids = new Set(here.map((a) => a.member_id))

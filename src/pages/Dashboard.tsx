@@ -13,6 +13,7 @@ import { useSongs } from '../lib/queries'
 import { resolveItems } from '../lib/setlist'
 import { addDays, EVENT_TYPES, fmtDate, fmtDateLong, fmtTime, STATUS_LABEL, todayStr, toISODate } from '../lib/utils'
 import type { Alert, EventRow, ResponseStatus, SetlistItem } from '../types'
+import { SwapPanel } from '../components/SwapPanel'
 import { Avatar, Badge, Button, Card, CountUp, Cover, EmptyState, Field, Input, Modal, PageHeader, PageLoader, SectionTitle, Textarea } from '../components/ui'
 import { statusTone } from './Events'
 
@@ -179,6 +180,8 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      <SwapPanel />
 
       {isLeader && (
         <div className="stagger grid gap-4 sm:grid-cols-3">

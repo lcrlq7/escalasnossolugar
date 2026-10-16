@@ -23,7 +23,7 @@ export function SongFormModal({ open, song, initial, onClose, onSaved }:
   const qc = useQueryClient()
   const [f, setF] = useState({
     title: '', artist: '', album: '', cover_url: '', original_key: '', church_key: '', bpm: '', duration: '',
-    youtube_url: '', spotify_url: '', tags: '', lyrics: '', notes: '', is_habitual: false,
+    youtube_url: '', spotify_url: '', tags: '', lyrics: '', chord_chart: '', notes: '', is_habitual: false,
   })
   const [source, setSource] = useState('manual')
   const [saving, setSaving] = useState(false)
@@ -38,7 +38,7 @@ export function SongFormModal({ open, song, initial, onClose, onSaved }:
       original_key: s?.original_key ?? '', church_key: s?.church_key ?? '', bpm: s?.bpm ? String(s.bpm) : '',
       duration: fmtDuration(s?.duration_seconds ?? initial?.duration_seconds ?? null),
       youtube_url: s?.youtube_url ?? initial?.youtube_url ?? '', spotify_url: s?.spotify_url ?? initial?.spotify_url ?? '',
-      tags: (s?.tags ?? []).join(', '), lyrics: s?.lyrics ?? '', notes: s?.notes ?? '', is_habitual: s?.is_habitual ?? false,
+      tags: (s?.tags ?? []).join(', '), lyrics: s?.lyrics ?? '', chord_chart: s?.chord_chart ?? '', notes: s?.notes ?? '', is_habitual: s?.is_habitual ?? false,
     })
     setSource(s?.source ?? initial?.source ?? 'manual')
     setSimilar([])
@@ -73,7 +73,7 @@ export function SongFormModal({ open, song, initial, onClose, onSaved }:
       cover_url: f.cover_url.trim() || null, original_key: f.original_key.trim() || null,
       church_key: f.church_key.trim() || null, bpm, duration_seconds: dur,
       youtube_url: f.youtube_url.trim() || null, spotify_url: f.spotify_url.trim() || null,
-      tags: f.tags.split(',').map((t) => t.trim()).filter(Boolean), lyrics: f.lyrics.trim() || null,
+      tags: f.tags.split(',').map((t) => t.trim()).filter(Boolean), lyrics: f.lyrics.trim() || null, chord_chart: f.chord_chart.trim() || null,
       notes: f.notes.trim() || null, is_habitual: f.is_habitual,
     }
     setSaving(true)
@@ -139,6 +139,7 @@ export function SongFormModal({ open, song, initial, onClose, onSaved }:
         <Field label="Tags e categorias" hint="Separe por vírgula. Ex.: adoração, cura, celebração"><Input value={f.tags} onChange={(e) => set('tags', e.target.value)} /></Field>
         <Field label="Observações sobre a execução"><Textarea value={f.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Ex.: começar só com teclado; repetir o refrão 2x" /></Field>
         <Field label="Letra" hint="Insira apenas letras que você tem autorização para usar."><Textarea className="min-h-[140px]" value={f.lyrics} onChange={(e) => set('lyrics', e.target.value)} /></Field>
+        <Field label="Cifra" hint="Cole a cifra com os acordes em linhas próprias, acima da letra. No modo palco dá para transpor o tom e rolar sozinho."><Textarea className="min-h-[140px] font-mono text-xs" value={f.chord_chart} onChange={(e) => set('chord_chart', e.target.value)} placeholder={'G        D/F#     Em\nTua graça me alcançou'} /></Field>
         <Toggle checked={f.is_habitual} onChange={(v) => set('is_habitual', v)} label="Faz parte do repertório habitual da igreja" />
       </div>
     </Modal>

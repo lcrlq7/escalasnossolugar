@@ -2,7 +2,7 @@ import type { Category, Setlist, SetlistItem, Song } from '../types'
 
 export interface ResolvedItem {
   id: string; position: number; kind: SetlistItem['kind']; note: string | null
-  category: string | null; key: string | null; duration: number | null; song: Song | null
+  category: string | null; key: string | null; duration: number | null; song: Song | null; rehearsed: boolean
 }
 
 export const effectiveKey = (i: Pick<SetlistItem, 'key_override'>, s?: Song | null) =>
@@ -15,7 +15,7 @@ export function resolveItems(items: SetlistItem[], cats: Category[]): ResolvedIt
     category: i.category_id ? cm.get(i.category_id) ?? null : null,
     key: i.kind === 'song' ? effectiveKey(i, i.song) : null,
     duration: i.duration_override_seconds ?? i.song?.duration_seconds ?? null,
-    song: i.song ?? null,
+    song: i.song ?? null, rehearsed: !!i.rehearsed,
   }))
 }
 

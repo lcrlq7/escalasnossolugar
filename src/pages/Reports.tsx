@@ -31,6 +31,10 @@ export default function Reports() {
     queryFn: async () => (unwrap(await supabase.rpc('upcoming_event_alerts', { p_from: todayStr(), p_to: addDays(todayStr(), 60) })) ?? []) as { event_id: string; title: string; event_date: string; alerts: Alert[] }[],
   })
 
+  const att = useQuery({
+    queryKey: ['attendance-report', from, to],
+    queryFn: async () => (unwrap(await supabase.rpc('attendance_report', { p_from: from, p_to: to })) ?? []) as { member_id: string; full_name: string; total: number; confirmed: number; declined: number; pending: number; last_served: string | null; last_30: number }[],
+  })
   const d = useMemo(() => {
     const rows = (evs.data ?? []).flatMap((e) => e.event_assignments.map((a) => ({ e, a, name: one(a.member)?.full_name ?? '—', fn: one(a.function)?.name ?? '—' })))
     const per = new Map<string, { name: string; events: Set<string>; confirmed: number; declined: number; pending: number }>()
@@ -100,6 +104,16 @@ export default function Reports() {
               <li key={u.event_id} className="flex justify-between gap-3"><Link to={`/escalas/${u.event_id}`} className="truncate font-semibold hover:underline">{u.event_title}</Link><span className="shrink-0 text-muted">{fmtDate(u.date)} · {(usage.data ?? []).filter((x) => x.event_id === u.event_id).length} músicas</span></li>))}</ul></Card>
         </div>
       </>)}
+
+      <Card className="overflow-x-auto p-5"><SectionTitle title="Carga e rodízio da equipe" subtitle="Quem está sobrecarregado e quem está há mais tempo sem servir" />
+        {(att.data ?? []).length === 0 ? <p className="text-sm text-muted">Sem integrantes ativos.</p> : (
+          <table className="w-full min-w-[32rem] text-sm"><thead><tr className="border-b border-border text-left text-xs uppercase text-muted"><th className="py-2">Integrante</th><th>No período</th><th>Últimos 30 dias</th><th>Última vez</th><th>Situação</th></tr></thead>
+            <tbody>{att.data!.map((m) => {
+              const days = m.last_served ? Math.floor((Date.now() - new Date(`${m.last_served}T12:00:00`).getTime()) / 86400000) : null
+              return (<tr key={m.member_id} className="border-b border-border/60 last:border-0"><td className="py-2 font-semibold">{m.full_name}</td><td>{m.total}</td><td>{m.last_30}</td>
+                <td>{m.last_served ? fmtDate(m.last_served) : '—'}</td>
+                <td>{m.last_30 >= 4 ? <Badge tone="warn">Sobrecarregado(a)</Badge> : days === null || days > 45 ? <Badge tone="info">Descansado(a)</Badge> : <Badge tone="ok">Em dia</Badge>}</td></tr>)
+            })}</tbody></table>)}</Card>
 
       <Card className="p-5"><SectionTitle title="Escalas com pendências" subtitle="Próximos 60 dias" />
         {(pend.data ?? []).length === 0 ? <p className="text-sm text-ok">Nenhuma pendência encontrada.</p> : (

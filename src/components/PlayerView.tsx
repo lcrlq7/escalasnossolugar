@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, ExternalLink, FileText, X, Youtube, Music2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, ExternalLink, FileText, Minus, Pause, Play, Plus, X, Youtube, Music2 } from 'lucide-react'
+import { transposeChart, transposeKey } from '../lib/chords'
 import { cn, fmtDuration, fmtTotal, safeUrl } from '../lib/utils'
 import { totalSeconds, KIND_LABEL, type ResolvedItem } from '../lib/setlist'
 import { Badge, Button, Cover, IconButton } from './ui'
@@ -8,6 +9,17 @@ import { Badge, Button, Cover, IconButton } from './ui'
 export function PlayerView({ title, items, onClose }: { title: string; items: ResolvedItem[]; onClose: () => void }) {
   const [idx, setIdx] = useState(0)
   const [lyrics, setLyrics] = useState(false)
+  const [chart, setChart] = useState(false)
+  const [steps, setSteps] = useState(0)
+  const [font, setFont] = useState(18)
+  const [scroll, setScroll] = useState(0)
+  const area = useRef<HTMLDivElement>(null)
+  useEffect(() => { setSteps(0); setScroll(0); area.current?.scrollTo({ top: 0 }) }, [idx])
+  useEffect(() => {
+    if (!scroll) return
+    const t = window.setInterval(() => { area.current?.scrollBy({ top: scroll * 0.6 }) }, 50)
+    return () => window.clearInterval(t)
+  }, [scroll])
   const cur = items[idx]
   const t = totalSeconds(items)
   useEffect(() => {
@@ -33,7 +45,7 @@ export function PlayerView({ title, items, onClose }: { title: string; items: Re
       </div>
       {!cur ? <div className="flex flex-1 items-center justify-center text-muted">Repertório vazio.</div> : (
         <div className="grid flex-1 gap-0 overflow-hidden md:grid-cols-[1fr_20rem]">
-          <div className="flex flex-col items-center overflow-y-auto px-5 py-6 text-center">
+          <div ref={area} className="flex flex-col items-center overflow-y-auto px-5 py-6 text-center">
             {cur.kind === 'song' && cur.song ? (
               <>
                 <Cover url={cur.song.cover_url} size={220} className="!rounded-2xl shadow-card" />
@@ -41,7 +53,8 @@ export function PlayerView({ title, items, onClose }: { title: string; items: Re
                 <h2 className="stage-text mt-3 font-extrabold">{cur.song.title}</h2>
                 <p className="mt-1 text-lg text-muted">{cur.song.artist}</p>
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-                  {cur.key && <span className="rounded-xl bg-accent px-4 py-1.5 text-2xl font-extrabold text-accentfg">{cur.key}</span>}
+                  {cur.key && <span className="rounded-xl bg-accent px-4 py-1.5 text-2xl font-extrabold text-accentfg">{transposeKey(cur.key, steps)}</span>}
+                  {steps !== 0 && cur.key && <span className="text-xs text-muted">(original {cur.key})</span>}
                   {cur.duration ? <span className="text-sm text-muted">{fmtDuration(cur.duration)}</span> : null}
                   {cur.song.bpm ? <span className="text-sm text-muted">{cur.song.bpm} BPM</span> : null}
                 </div>
@@ -50,8 +63,28 @@ export function PlayerView({ title, items, onClose }: { title: string; items: Re
                 <div className="mt-5 flex flex-wrap justify-center gap-2">
                   {cur.song.youtube_url && <a href={safeUrl(cur.song.youtube_url)} target="_blank" rel="noreferrer" className="btn bg-surface2 hover:bg-border"><Youtube className="h-4 w-4" />Abrir no YouTube<ExternalLink className="h-3 w-3" /></a>}
                   {cur.song.spotify_url && <a href={safeUrl(cur.song.spotify_url)} target="_blank" rel="noreferrer" className="btn bg-surface2 hover:bg-border"><Music2 className="h-4 w-4" />Abrir no Spotify<ExternalLink className="h-3 w-3" /></a>}
+                  {cur.song.chord_chart && <Button onClick={() => setChart((c) => !c)}><FileText className="h-4 w-4" />{chart ? 'Ocultar cifra' : 'Ver cifra'}</Button>}
                   {cur.song.lyrics && <Button onClick={() => setLyrics((l) => !l)}><FileText className="h-4 w-4" />{lyrics ? 'Ocultar letra' : 'Ver letra'}</Button>}
                 </div>
+                {chart && cur.song.chord_chart && (
+                  <div className="mt-5 w-full max-w-2xl">
+                    <div className="sticky top-0 z-10 mb-3 flex flex-wrap items-center justify-center gap-2 rounded-xl border border-border bg-surface/95 p-2 backdrop-blur">
+                      <span className="text-xs font-bold text-muted">Tom</span>
+                      <Button className="!px-2.5 !py-1.5" onClick={() => setSteps((n) => n - 1)} aria-label="Descer meio tom"><Minus className="h-4 w-4" /></Button>
+                      <span className="min-w-[2.5rem] text-sm font-extrabold">{steps > 0 ? `+${steps}` : steps}</span>
+                      <Button className="!px-2.5 !py-1.5" onClick={() => setSteps((n) => n + 1)} aria-label="Subir meio tom"><Plus className="h-4 w-4" /></Button>
+                      <span className="mx-1 h-5 w-px bg-border" />
+                      <Button className="!px-2.5 !py-1.5" onClick={() => setFont((n) => Math.max(12, n - 2))} aria-label="Diminuir letra">A−</Button>
+                      <Button className="!px-2.5 !py-1.5" onClick={() => setFont((n) => Math.min(34, n + 2))} aria-label="Aumentar letra">A+</Button>
+                      <span className="mx-1 h-5 w-px bg-border" />
+                      <Button className="!px-2.5 !py-1.5" variant={scroll ? 'primary' : 'secondary'} onClick={() => setScroll((v) => (v ? 0 : 2))} aria-label="Rolagem automática">{scroll ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</Button>
+                      {scroll > 0 && <>
+                        <Button className="!px-2.5 !py-1.5" onClick={() => setScroll((v) => Math.max(1, v - 1))} aria-label="Mais devagar">−</Button>
+                        <span className="text-xs text-muted">vel. {scroll}</span>
+                        <Button className="!px-2.5 !py-1.5" onClick={() => setScroll((v) => Math.min(8, v + 1))} aria-label="Mais rápido">+</Button></>}
+                    </div>
+                    <pre className="overflow-x-auto whitespace-pre text-left font-mono leading-snug" style={{ fontSize: font }}>{transposeChart(cur.song.chord_chart, steps)}</pre>
+                  </div>)}
                 {lyrics && cur.song.lyrics && <pre className="mt-5 max-w-xl whitespace-pre-wrap text-left font-sans text-lg leading-relaxed">{cur.song.lyrics}</pre>}
                 {!cur.song.youtube_url && !cur.song.spotify_url && <p className="mt-4 text-xs text-muted">Sem links cadastrados para esta música.</p>}
               </>

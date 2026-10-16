@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { useTheme } from '../context/Theme'
 import { ROLE_LABEL } from '../lib/utils'
+import { disablePush, enablePush, pushStatus } from '../lib/push'
 import { Avatar, Badge, Button, Card, Field, Input, PageHeader, SectionTitle } from '../components/ui'
 
 export default function Profile() {
@@ -15,6 +16,16 @@ export default function Profile() {
   const [pw, setPw] = useState('')
   const [pw2, setPw2] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
+  const [push, setPush] = useState<'unsupported' | 'denied' | 'on' | 'off'>('off')
+  useEffect(() => { void pushStatus().then(setPush) }, [])
+  const togglePush = async () => {
+    setBusy('n')
+    try {
+      if (push === 'on') { await disablePush(); toast.success('Avisos no celular desativados neste aparelho.') }
+      else { await enablePush(session!.user.id); toast.success('Avisos ativados neste aparelho!') }
+      setPush(await pushStatus())
+    } catch (e) { toast.error(e) } finally { setBusy(null) }
+  }
 
   const saveProfile = async () => {
     if (!name.trim()) return toast.error('Informe seu nome.')
@@ -36,6 +47,12 @@ export default function Profile() {
   return (
     <div className="max-w-2xl space-y-6">
       <PageHeader title="Meu perfil" />
+      <Card className="space-y-3 p-5">
+        <SectionTitle title="Avisos no celular" subtitle="Receba lembretes de escala, pedidos de troca e avisos mesmo com o site fechado." />
+        {push === 'unsupported' ? <p className="text-sm text-muted">Este navegador não suporta avisos. No iPhone, abra o site no Safari, toque em Compartilhar → Adicionar à Tela de Início e abra o app instalado.</p>
+          : push === 'denied' ? <p className="text-sm text-warn">As notificações estão bloqueadas neste navegador. Libere nas configurações do site e volte aqui.</p>
+          : <div className="flex flex-wrap items-center gap-3"><Button variant={push === 'on' ? 'outline' : 'primary'} loading={busy === 'n'} onClick={() => void togglePush()}>{push === 'on' ? 'Desativar neste aparelho' : 'Ativar avisos neste aparelho'}</Button>{push === 'on' && <Badge tone="ok">Ativo</Badge>}</div>}
+      </Card>
       <Card className="space-y-4 p-5">
         <div className="flex items-center gap-4"><Avatar name={profile?.full_name ?? '?'} size={56} />
           <div><p className="font-bold">{profile?.full_name}</p><p className="text-sm text-muted">{profile?.email}</p>

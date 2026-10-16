@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { CalendarPlus, CheckCircle2, ClipboardList, Clock, MapPin, Search, Users, XCircle } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { CalendarPlus, CalendarRange, CheckCircle2, ClipboardList, Clock, MapPin, Search, Users, XCircle } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
+import { useToast } from '../context/Toast'
+import { useSchedules } from '../lib/queries'
 import { EVENT_TYPES, STATUS_LABEL, cn, fmtTime, normalize, parseDate, todayStr } from '../lib/utils'
 import type { EventRow, EventStatus, ResponseStatus } from '../types'
-import { Badge, Button, EmptyState, Fab, Input, PageHeader, PageLoader, Tabs } from '../components/ui'
+import { Badge, Button, EmptyState, Fab, Field, Input, Modal, PageHeader, PageLoader, Select, Tabs } from '../components/ui'
 
 export type EventListItem = EventRow & { event_assignments: { member_id: string; status: ResponseStatus }[] }
 
@@ -54,9 +56,48 @@ export function EventCard({ e, myMemberId }: { e: EventListItem; myMemberId?: st
   )
 }
 
+const WEEKDAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+
+function RecurringModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const toast = useToast()
+  const qc = useQueryClient()
+  const schedules = useSchedules()
+  const [sched, setSched] = useState('')
+  const [from, setFrom] = useState(todayStr())
+  const [weeks, setWeeks] = useState(8)
+  const [busy, setBusy] = useState(false)
+  const go = async () => {
+    if (!sched) { toast.error('Escolha um horário de culto.'); return }
+    setBusy(true)
+    try {
+      const n = unwrap(await supabase.rpc('create_recurring_events', { p_schedule: sched, p_from: from, p_weeks: weeks })) as number
+      toast.success(`${n} escala(s) criadas como rascunho.`)
+      qc.invalidateQueries({ queryKey: ['events-list'] })
+      onClose()
+    } catch (e) { toast.error(e) } finally { setBusy(false) }
+  }
+  return (
+    <Modal open={open} onClose={onClose} title="Escalas recorrentes"
+      footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" loading={busy} onClick={() => void go()}>Gerar escalas</Button></>}>
+      <div className="space-y-3">
+        <p className="text-sm text-muted">Cria vários rascunhos de uma vez, um por semana, nos dias e horários cadastrados. Datas que já têm essa escala são puladas.</p>
+        <Field label="Horário de culto">
+          <Select value={sched} onChange={(e) => setSched(e.target.value)}>
+            <option value="">Selecione…</option>
+            {(schedules.data ?? []).map((x) => <option key={x.id} value={x.id}>{x.name} — {WEEKDAYS[x.weekday]} {String(x.start_time).slice(0, 5)}</option>)}
+          </Select>
+        </Field>
+        <Field label="A partir de"><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
+        <Field label="Quantas semanas (1 a 26)"><Input type="number" min={1} max={26} value={weeks} onChange={(e) => setWeeks(Math.max(1, Math.min(26, Number(e.target.value) || 1)))} /></Field>
+      </div>
+    </Modal>
+  )
+}
+
 export default function Events() {
   const { isLeader, member } = useAuth()
   const nav = useNavigate()
+  const [rec, setRec] = useState(false)
   const [tab, setTab] = useState<'next' | 'draft' | 'past' | 'cancelled'>('next')
   const [q, setQ] = useState('')
   const query = useQuery({
@@ -85,7 +126,8 @@ export default function Events() {
   return (
     <div>
       <PageHeader title="Escalas" subtitle="Cultos, ensaios e eventos do ministério de louvor."
-        actions={isLeader && <Link to="/escalas/nova"><Button variant="primary"><CalendarPlus className="h-4 w-4" />Nova escala</Button></Link>} />
+        actions={isLeader && <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setRec(true)}><CalendarRange className="h-4 w-4" />Recorrentes</Button><Link to="/escalas/nova"><Button variant="primary"><CalendarPlus className="h-4 w-4" />Nova escala</Button></Link></div>} />
+      <RecurringModal open={rec} onClose={() => setRec(false)} />
       <div className="mb-4 relative"><Search className="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-muted" /><Input className="!pl-10" placeholder="Buscar por nome, tipo ou local" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       {isLeader && <Fab label="Nova escala" onClick={() => nav('/escalas/nova')}><CalendarPlus className="h-6 w-6" /></Fab>}
       <Tabs value={tab} onChange={setTab} items={items} />

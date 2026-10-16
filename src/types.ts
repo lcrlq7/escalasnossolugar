@@ -38,7 +38,7 @@ export interface Song {
   original_key: string | null; church_key: string | null; bpm: number | null
   duration_seconds: number | null; lyrics: string | null; youtube_url: string | null
   spotify_url: string | null; album: string | null; tags: string[]; notes: string | null
-  is_habitual: boolean; archived: boolean; source: string; created_at: string
+  is_habitual: boolean; archived: boolean; source: string; created_at: string; chord_chart?: string | null
 }
 export interface Category { id: string; church_id: string; name: string; sort_order: number }
 export interface Setlist {
@@ -50,7 +50,7 @@ export type ItemKind = 'song' | 'note' | 'prayer' | 'transition'
 export interface SetlistItem {
   id: string; setlist_id: string; position: number; kind: ItemKind; song_id: string | null
   category_id: string | null; key_override: string | null; note: string | null
-  duration_override_seconds: number | null; song?: Song | null
+  duration_override_seconds: number | null; rehearsed?: boolean; song?: Song | null
 }
 export interface Alert { type: string; severity: 'error' | 'warning' | 'info'; message: string; member_id?: string }
 export interface AppNotification {

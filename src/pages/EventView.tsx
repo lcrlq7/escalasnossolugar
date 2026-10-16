@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock, FileDown, MapPin, Pencil, Play, Wrench, XCircle, Link2, Mic2, Youtube, Music2 } from 'lucide-react'
+import { CheckCircle2, Circle, Clock, FileDown, MapPin, Pencil, Play, Repeat2, Wrench, XCircle, Link2, Mic2, Youtube, Music2 } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
@@ -15,6 +15,7 @@ import { EVENT_TYPES, RESPONSE_LABEL, STATUS_LABEL, fmtDateLong, fmtDuration, fm
 import type { SetlistItem } from '../types'
 import { Avatar, Badge, Button, Card, Cover, EmptyState, Modal, PageLoader, SectionTitle, Textarea, Toggle } from '../components/ui'
 import { statusTone } from './Events'
+import { SwapModal } from '../components/SwapModal'
 
 export default function EventView() {
   const { id } = useParams()
@@ -36,6 +37,7 @@ export default function EventView() {
   const [declineOpen, setDeclineOpen] = useState(false)
   const [reason, setReason] = useState('')
   const [player, setPlayer] = useState(false)
+  const [swapFor, setSwapFor] = useState<string | null>(null)
   useEffect(() => { if (ev.data) { setTech(ev.data.tech_notes ?? ''); setReady(ev.data.sound_ready) } }, [ev.data])
 
   const resolved = useMemo(() => resolveItems(items.data ?? [], cats.data ?? []), [items.data, cats.data])
@@ -54,6 +56,10 @@ export default function EventView() {
   const refresh = () => { qc.invalidateQueries({ queryKey: ['assignments', id] }); qc.invalidateQueries({ queryKey: ['event', id] }); qc.invalidateQueries({ queryKey: ['events-list'] }); qc.invalidateQueries({ queryKey: ['alerts', id] }) }
   const respond = async (status: 'confirmed' | 'declined', why?: string) => {
     try { unwrap(await supabase.rpc('respond_event', { p_event_id: e.id, p_status: status, p_reason: why ?? null })); toast.success(status === 'confirmed' ? 'Presença confirmada. Obrigado!' : 'Resposta registrada. O líder foi avisado.'); setDeclineOpen(false); refresh() }
+    catch (err) { toast.error(err) }
+  }
+  const toggleRehearsed = async (itemId: string, value: boolean) => {
+    try { unwrap(await supabase.rpc('set_item_rehearsed', { p_item: itemId, p_value: value })); qc.invalidateQueries({ queryKey: ['setlist-items-event'] }) }
     catch (err) { toast.error(err) }
   }
   const saveTech = async (nextReady = ready) => {
@@ -105,6 +111,7 @@ export default function EventView() {
             <div className="flex gap-2">
               <Button variant={myState === 'confirmed' ? 'secondary' : 'primary'} onClick={() => void respond('confirmed')}><CheckCircle2 className="h-4 w-4" />{myState === 'confirmed' ? 'Confirmado' : 'Confirmar presença'}</Button>
               <Button variant="danger" onClick={() => setDeclineOpen(true)}><XCircle className="h-4 w-4" />Não poderei</Button>
+              {mine[0] && new Date(`${e.event_date}T23:59:59`) >= new Date() && <Button onClick={() => setSwapFor(mine[0].id)}><Repeat2 className="h-4 w-4" />Pedir troca</Button>}
             </div>
           </div>
         </div>)}
@@ -139,7 +146,7 @@ export default function EventView() {
         </div>
 
         <Card className="p-5">
-          <SectionTitle title="Repertório" subtitle={resolved.length ? `${resolved.filter((r) => r.kind === 'song').length} músicas · ${fmtTotal(tot.total)}` : undefined} />
+          <SectionTitle title="Repertório" subtitle={resolved.length ? `${resolved.filter((r) => r.kind === 'song').length} músicas · ${fmtTotal(tot.total)} · ${resolved.filter((r) => r.kind === 'song' && r.rehearsed).length} ensaiadas` : undefined} />
           {resolved.length === 0 ? <EmptyState title="Repertório ainda não definido" /> : (
             <ol className="space-y-2">
               {resolved.map((r, n) => (
@@ -153,6 +160,9 @@ export default function EventView() {
                       {r.note && <p className="mt-0.5 text-xs text-accenttext">{r.note}</p>}
                     </div>
                     {r.key && <span className="rounded-lg bg-accent px-2.5 py-1 text-sm font-extrabold text-accentfg">{r.key}</span>}
+                    {(isLeader || mine.length > 0) && e.status !== 'draft' && (
+                      <button onClick={() => void toggleRehearsed(r.id, !r.rehearsed)} aria-label={r.rehearsed ? 'Marcar como não ensaiada' : 'Marcar como ensaiada'} title={r.rehearsed ? 'Ensaiada' : 'Precisa ensaiar'}
+                        className={`press rounded-lg p-2 ${r.rehearsed ? 'text-ok' : 'text-muted hover:text-fg'}`}>{r.rehearsed ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}</button>)}
                     <div className="flex gap-1">
                       {r.song?.youtube_url && <a aria-label="Abrir no YouTube" href={safeUrl(r.song.youtube_url)} target="_blank" rel="noreferrer" className="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-fg"><Youtube className="h-4 w-4" /></a>}
                       {r.song?.spotify_url && <a aria-label="Abrir no Spotify" href={safeUrl(r.song.spotify_url)} target="_blank" rel="noreferrer" className="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-fg"><Music2 className="h-4 w-4" /></a>}
@@ -164,6 +174,7 @@ export default function EventView() {
         </Card>
       </div>
 
+      <SwapModal open={!!swapFor} assignmentId={swapFor} eventId={e.id} onClose={() => setSwapFor(null)} />
       {player && <PlayerView title={e.title} items={resolved} onClose={() => setPlayer(false)} />}
       <Modal open={declineOpen} onClose={() => setDeclineOpen(false)} size="sm" title="Não poderei participar"
         footer={<><Button variant="ghost" onClick={() => setDeclineOpen(false)}>Voltar</Button><Button variant="danger" onClick={() => void respond('declined', reason.trim())}>Confirmar recusa</Button></>}>

@@ -23,7 +23,7 @@ export default function SharedSetlist() {
   const { church } = useAuth()
   const [player, setPlayer] = useState(false)
   const q = useQuery({ queryKey: ['shared', token], queryFn: async () => unwrap(await supabase.rpc('get_shared_setlist', { p_token: token! })) as unknown as Shared | null })
-  const items: ResolvedItem[] = useMemo(() => (q.data?.items ?? []).map((i) => ({ id: i.id, position: i.position, kind: i.kind, note: i.note, category: i.category, key: i.key, duration: i.duration_seconds, song: i.song })), [q.data])
+  const items: ResolvedItem[] = useMemo(() => (q.data?.items ?? []).map((i) => ({ id: i.id, position: i.position, kind: i.kind, note: i.note, category: i.category, key: i.key, duration: i.duration_seconds, song: i.song, rehearsed: false })), [q.data])
   if (q.isLoading) return <PageLoader />
   if (!q.data) return <EmptyState title="Repertório indisponível" text="O link é inválido ou você não tem autorização para ver este repertório. Apenas integrantes autorizados conseguem abri-lo." action={<Link to="/"><Button variant="primary">Ir para o início</Button></Link>} />
   const { setlist, event } = q.data
