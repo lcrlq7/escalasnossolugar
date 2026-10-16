@@ -46,7 +46,7 @@ function MemberModal({ open, member, onClose }: { open: boolean; member: Member 
       footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" loading={saving} onClick={() => void save()}>Salvar</Button></>}>
       <div className="space-y-4">
         <Field label="Nome completo *"><Input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></Field>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="stagger grid gap-4 sm:grid-cols-2">
           <Field label="Telefone / WhatsApp"><Input inputMode="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
           <Field label="E-mail"><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
         </div>
@@ -84,7 +84,7 @@ export default function Members() {
         <EmptyState title="Nenhum integrante cadastrado" text={isAdmin ? 'Cadastre os integrantes do ministério. Só quem está na lista pode ser escalado.' : 'Um administrador ainda não cadastrou integrantes.'}
           action={isAdmin && <Button variant="primary" onClick={() => { setEdit(null); setOpen(true) }}><Plus className="h-4 w-4" />Cadastrar integrante</Button>} />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((m) => (
             <div key={m.id} className={cn('card p-4', !m.active && 'opacity-60')}>
               <div className="flex items-start gap-3">

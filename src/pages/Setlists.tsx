@@ -51,7 +51,7 @@ export function SetlistsPage() {
         <EmptyState icon={<ListMusic className="h-6 w-6" />} title={tab === 'tpl' ? 'Nenhum modelo salvo' : 'Nenhum repertório de culto ainda'}
           text={tab === 'tpl' ? 'Crie um repertório-modelo ou salve um repertório de culto como favorito para reutilizá-lo.' : 'Os repertórios aparecem aqui conforme você cria escalas.'} />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="stagger grid gap-3 sm:grid-cols-2">
           {list.map((s) => (
             <Card key={s.id} className="flex items-center gap-3 p-4">
               <Link to={s.event_id ? `/escalas/${s.event_id}/editar` : `/repertorios/${s.id}`} className="min-w-0 flex-1">

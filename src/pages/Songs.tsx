@@ -190,7 +190,7 @@ export default function Songs() {
             text={(songs.data?.length ?? 0) === 0 ? (isLeader ? 'Pesquise o nome de uma música para trazer capa, artista e link automaticamente — ou cadastre manualmente.' : 'O líder ainda não cadastrou músicas. Você pode enviar sugestões na aba ao lado.') : 'Ajuste a busca ou os filtros.'}
             action={isLeader && (songs.data?.length ?? 0) === 0 && <Button variant="primary" onClick={() => setAdd(true)}><Plus className="h-4 w-4" />Adicionar a primeira música</Button>} />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {list.map((s) => (
               <div key={s.id} className="card flex items-center gap-3 p-3 transition hover:border-accent/60">
                 <button onClick={() => setView(s)} className="flex min-w-0 flex-1 items-center gap-3 text-left">

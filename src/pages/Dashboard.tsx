@@ -111,7 +111,7 @@ export default function Dashboard() {
       {!isLeader && !member && (hasRole('minister') || isTech) && (
         <p className="rounded-xl border border-warn/40 bg-warn/10 p-3 text-sm text-warn">Seu usuário ainda não está vinculado a um integrante. Um administrador precisa fazer essa ligação para você receber escalas.</p>)}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      <div className="stagger grid gap-6 lg:grid-cols-[1fr_22rem]">
         <Card className="overflow-hidden">
           {next ? (
             <>
@@ -181,13 +181,13 @@ export default function Dashboard() {
       </div>
 
       {isLeader && (
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="stagger grid gap-4 sm:grid-cols-3">
           <Stat icon={<CalendarDays className="h-5 w-5" />} label="Escalas neste mês" value={monthCount.data ?? '–'} />
           <Stat icon={<Music2 className="h-5 w-5" />} label="Músicas na biblioteca" value={songs.data?.length ?? '–'} />
           <Stat icon={<Users className="h-5 w-5" />} label="Aguardando confirmação (próximo culto)" value={next ? unconfirmed.length : '–'} />
         </div>)}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      <div className="stagger grid gap-6 lg:grid-cols-[1fr_22rem]">
         <Card className="p-4"><SectionTitle title="Calendário do mês" action={<Link to="/calendario" className="text-xs font-semibold text-accenttext">Abrir calendário</Link>} /><CalendarView compact /></Card>
         {isLeader && (
           <Card className="p-5">

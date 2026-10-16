@@ -121,8 +121,8 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }:
   const w = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl', xl: 'max-w-5xl' }[size]
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={cn('relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-border bg-surface shadow-card md:rounded-2xl', w)}>
+      <div className="absolute inset-0 animate-fade-in bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className={cn('relative flex max-h-[92dvh] w-full animate-sheet flex-col rounded-t-3xl md:animate-pop border border-border bg-surface shadow-card md:rounded-2xl', w)}>
         <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
           <h3 className="text-base font-bold">{title}</h3>
           <IconButton label="Fechar" onClick={onClose}><X className="h-5 w-5" /></IconButton>

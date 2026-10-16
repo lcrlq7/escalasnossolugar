@@ -7,21 +7,38 @@ import { Button, Field, Input } from '../components/ui'
 import { useToast } from '../context/Toast'
 import { LogOut, MailCheck, Moon, Sun } from 'lucide-react'
 
+const NOTES = Array.from({ length: 9 }, (_, i) => ({ left: `${6 + i * 11}%`, delay: `${(i * 1.7) % 9}s`, dur: `${11 + (i % 4) * 3}s`, size: 14 + (i % 3) * 8, ch: ['♪', '♫', '♩', '♬'][i % 4] }))
+
 function Shell({ title, subtitle, children, footer }: { title: string; subtitle?: string; children: ReactNode; footer?: ReactNode }) {
   const { theme, toggle } = useTheme()
   return (
-    <div className="relative flex min-h-full items-center justify-center px-4 py-10">
-      <button onClick={toggle} aria-label="Alternar tema" className="absolute right-4 top-4 rounded-lg p-2 text-muted hover:bg-surface2">
+    <div className="auth-bg relative flex min-h-full items-center justify-center overflow-hidden px-4 py-10">
+      {/* fundo em movimento */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-24 top-10 h-80 w-80 animate-float rounded-full bg-accent/25 blur-3xl" />
+        <div className="absolute -right-20 bottom-0 h-96 w-96 animate-float2 rounded-full bg-info/20 blur-3xl" />
+        <div className="absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 animate-float rounded-full bg-accent/10 blur-3xl" />
+        {NOTES.map((n, i) => (
+          <span key={i} className="absolute bottom-0 animate-rise font-bold text-accent/60" style={{ left: n.left, animationDelay: n.delay, animationDuration: n.dur, fontSize: n.size, opacity: 0 }}>{n.ch}</span>
+        ))}
+      </div>
+      <button onClick={toggle} aria-label="Alternar tema" className="glass absolute right-4 top-4 z-10 rounded-xl border border-border p-2 text-muted transition hover:scale-105 hover:text-fg">
         {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
       </button>
-      <div className="w-full max-w-md">
-        <img src={`/brand/logo-full-${theme === 'dark' ? 'dark' : 'light'}.png`} alt="Igreja Metodista — Nosso Lugar de Adoração e Comunhão" className="mx-auto mb-8 h-40 w-auto" />
-        <div className="card p-6 md:p-8">
-          <h1 className="text-xl font-extrabold">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
-          <div className="mt-6">{children}</div>
+      <div className="relative w-full max-w-md">
+        <img src={`/brand/logo-full-${theme === 'dark' ? 'dark' : 'light'}.png`} alt="Igreja Metodista — Nosso Lugar de Adoração e Comunhão"
+          className="mx-auto mb-6 h-36 w-auto animate-fade-up drop-shadow-xl md:h-40" style={{ animationDelay: '.05s' }} />
+        <div>
+          <div className="glass animate-fade-up rounded-3xl border border-border p-6 shadow-card md:p-8" style={{ animationDelay: '.2s' }}>
+            <div className="mb-4 flex h-6 items-end gap-1" aria-hidden>
+              {[0, 0.2, 0.4, 0.1, 0.3].map((d, i) => <span key={i} className="h-full w-1.5 origin-bottom animate-eq rounded-full bg-accent" style={{ animationDelay: `${d}s` }} />)}
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
+            {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+            <div className="stagger mt-6">{children}</div>
+          </div>
         </div>
-        {footer && <div className="mt-5 text-center text-sm text-muted">{footer}</div>}
+        {footer && <div className="mt-5 animate-fade-up text-center text-sm text-muted" style={{ animationDelay: '.45s' }}>{footer}</div>}
       </div>
     </div>
   )
@@ -53,10 +70,10 @@ export function Login() {
   return (
     <Shell title="Entrar" subtitle="Acesse as escalas e repertórios do ministério de louvor."
       footer={<>Ainda não tem acesso? <Link to="/cadastro" className="font-semibold text-accenttext">Criar conta</Link></>}>
-      <form onSubmit={submit} className="space-y-4">
+      <form onSubmit={submit} className="stagger space-y-4">
         <Field label="E-mail"><Input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" /></Field>
         <Field label="Senha"><Input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" /></Field>
-        <Button variant="primary" type="submit" loading={busy} className="w-full">Entrar</Button>
+        <Button variant="primary" type="submit" loading={busy} className="btn-shine w-full">Entrar</Button>
         <div className="text-center"><Link to="/recuperar-senha" className="text-sm text-muted hover:text-fg">Esqueci minha senha</Link></div>
       </form>
     </Shell>

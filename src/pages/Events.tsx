@@ -91,7 +91,7 @@ export default function Events() {
         <EmptyState icon={<ClipboardList className="h-6 w-6" />} title={tab === 'next' ? 'Nenhuma escala publicada para os próximos dias' : tab === 'draft' ? 'Nenhum rascunho' : 'Nada por aqui'}
           text={tab === 'next' && isLeader ? 'Crie uma escala, monte a equipe e o repertório e publique para avisar os integrantes.' : undefined}
           action={isLeader && tab === 'next' && <Link to="/escalas/nova"><Button variant="primary"><CalendarPlus className="h-4 w-4" />Criar escala</Button></Link>} />
-      ) : <div className={cn('grid gap-3')}>{list.map((e) => <EventCard key={e.id} e={e} myMemberId={member?.id} />)}</div>}
+      ) : <div className={cn('stagger grid gap-3')}>{list.map((e) => <EventCard key={e.id} e={e} myMemberId={member?.id} />)}</div>}
     </div>
   )
 }

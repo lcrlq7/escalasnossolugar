@@ -58,6 +58,24 @@ input, select, textarea, button { font: inherit; }
   }
 }
 
+/* ---- Movimento ---- */
+.page-enter { animation: fade-up .45s cubic-bezier(.2,.8,.2,1) both; }
+.stagger > * { animation: fade-up .5s cubic-bezier(.2,.8,.2,1) both; }
+.stagger > *:nth-child(1) { animation-delay: .04s } .stagger > *:nth-child(2) { animation-delay: .09s }
+.stagger > *:nth-child(3) { animation-delay: .14s } .stagger > *:nth-child(4) { animation-delay: .19s }
+.stagger > *:nth-child(5) { animation-delay: .24s } .stagger > *:nth-child(6) { animation-delay: .29s }
+.stagger > *:nth-child(n+7) { animation-delay: .33s }
+.card { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+a.card:hover, button.card:hover, .card.lift:hover { transform: translateY(-3px); border-color: rgb(var(--accent) / .55); box-shadow: 0 14px 34px -14px rgb(var(--accent) / .35), 0 8px 24px -12px rgb(0 0 0 / .4); }
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn-shine { position: relative; overflow: hidden; }
+.btn-shine::after { content: ''; position: absolute; inset: 0; width: 40%; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .45), transparent); animation: shine 3.8s ease-in-out infinite; pointer-events: none; }
+.auth-bg { background: radial-gradient(1200px 600px at 15% -10%, rgb(var(--accent) / .16), transparent 60%), radial-gradient(900px 600px at 100% 110%, rgb(var(--info) / .14), transparent 60%), rgb(var(--bg)); }
+.glass { background: rgb(var(--surface) / .72); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
 /* ---- FullCalendar integrado ao tema ---- */
 .fc { --fc-border-color: rgb(var(--border)); --fc-page-bg-color: transparent;
   --fc-neutral-bg-color: rgb(var(--surface2)); --fc-list-event-hover-bg-color: rgb(var(--surface2));
