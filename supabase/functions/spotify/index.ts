@@ -35,7 +35,17 @@ async function accessToken(uid: string): Promise<string | null> {
 
 const trackIdOf = (u?: string | null) => (u ?? '').match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?track\/([A-Za-z0-9]{22})/)?.[1] ?? null
 
-async function sp(token: string, path: string, init?: RequestInit) {
+async function sp(token: string, path: string, init?: RequestInit, tries = 3): Promise<{ ok: boolean; status: number; body: Record<string, any> | null }> {
+  const res = await sp1(token, path, init)
+  if ((res.status >= 500 || res.status === 429) && tries > 1) {
+    await new Promise((r) => setTimeout(r, 700))
+    return sp(token, path, init, tries - 1)
+  }
+  return res
+}
+const errMsg = (b: Record<string, any> | null) => (b?.error?.message ? String(b.error.message) : typeof b === 'string' ? b : '')
+
+async function sp1(token: string, path: string, init?: RequestInit) {
   const r = await fetch(`https://api.spotify.com/v1${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(init?.headers ?? {}) } })
   const text = await r.text()
   let body: unknown = null
@@ -87,7 +97,7 @@ Deno.serve(async (req) => {
         items = (r2.body?.tracks?.items ?? []) as any[]
       }
       const cands = items.map((t) => ({ id: t.id, title: t.name, artist: (t.artists ?? []).map((a: any) => a.name).join(', '), album: t.album?.name ?? null, url: t.external_urls?.spotify ?? null, cover: t.album?.images?.[2]?.url ?? t.album?.images?.[0]?.url ?? null }))
-      out.push({ song_id: s.id, known_id: known, candidates: cands, error: r.ok ? null : `Spotify respondeu ${r.status}` })
+      out.push({ song_id: s.id, known_id: known, candidates: cands, error: r.ok ? null : `Spotify respondeu ${r.status}${errMsg(r.body) ? ': ' + errMsg(r.body) : ''}` })
     }
     return json({ results: out })
   }
