@@ -130,6 +130,7 @@ export default function Songs() {
   const [add, setAdd] = useState(false)
   const [imp, setImp] = useState(false)
   const [cov, setCov] = useState(false)
+  const [shown, setShown] = useState(60)
   const missingCovers = useMemo(() => (songs.data ?? []).filter((x) => !x.cover_url && /open\.spotify\.com\/track\//.test(x.spotify_url ?? '')), [songs.data])
   const fetchCovers = async () => {
     setCov(true)
@@ -174,34 +175,36 @@ export default function Songs() {
   return (
     <div>
       <PageHeader title="Músicas" subtitle="Biblioteca do ministério: letras, tons, links e histórico de uso."
-        actions={isLeader && tab === 'lib' && <><Button variant="outline" onClick={() => setImp(true)}>Importar playlist</Button>{missingCovers.length > 0 && <Button variant="outline" loading={cov} onClick={fetchCovers}>Buscar capas ({missingCovers.length})</Button>}<Button variant="primary" onClick={() => setAdd(true)}><Plus className="h-4 w-4" />Adicionar música</Button></>} />
+        actions={isLeader && tab === 'lib' && <div className="flex w-full flex-wrap gap-2 [&>.btn]:flex-1 sm:w-auto sm:[&>.btn]:flex-none"><Button variant="outline" onClick={() => setImp(true)}>Importar playlist</Button>{missingCovers.length > 0 && <Button variant="outline" loading={cov} onClick={fetchCovers}>Buscar capas ({missingCovers.length})</Button>}<Button variant="primary" onClick={() => setAdd(true)}><Plus className="h-4 w-4" />Adicionar música</Button></div>} />
       <Tabs value={tab === 'sug' ? 'sug' : 'lib'} onChange={(v) => setSp(v === 'sug' ? { aba: 'sugestoes' } : {})} items={[{ value: 'lib', label: 'Biblioteca', count: (songs.data ?? []).filter((s) => !s.archived).length }, { value: 'sug', label: 'Sugestões' }]} />
       {tab === 'sug' ? <Suggestions /> : (<>
-        <div className="mb-4 flex flex-wrap gap-2">
-          <div className="relative min-w-[14rem] flex-1"><Search className="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-muted" /><Input className="!pl-10" placeholder="Buscar por título, artista, álbum ou tag" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-          <div className="flex gap-1.5">
+        <div className="sticky top-[57px] z-20 -mx-4 mb-3 space-y-2 bg-bg/90 px-4 pb-2 pt-2 backdrop-blur md:static md:mx-0 md:flex md:flex-wrap md:space-y-0 md:gap-2 md:bg-transparent md:p-0 md:pb-0 md:backdrop-blur-none md:mb-4">
+          <div className="relative min-w-[14rem] flex-1"><Search className="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-muted" /><Input className="!pl-10" placeholder="Buscar por título, artista, álbum ou tag" value={q} onChange={(e) => { setQ(e.target.value); setShown(60) }} /></div>
+          <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 md:mx-0 md:px-0">
             {([['all', 'Todas'], ['fav', 'Favoritas'], ['habitual', 'Habituais'], ...(isLeader ? [['archived', 'Arquivadas']] : [])] as [typeof only, string][]).map(([v, l]) => (
-              <button key={v} onClick={() => setOnly(v)} className={cn('rounded-xl border px-3 py-2 text-sm font-semibold', only === v ? 'border-accent bg-accent/15 text-accenttext' : 'border-border text-muted hover:text-fg')}>{l}</button>))}
+              <button key={v} onClick={() => { setOnly(v); setShown(60) }} className={cn('shrink-0 whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-semibold', only === v ? 'border-accent bg-accent/15 text-accenttext' : 'border-border text-muted hover:text-fg')}>{l}</button>))}
           </div>
         </div>
-        {tags.length > 0 && <div className="mb-4 flex flex-wrap gap-1.5">{tags.map((t) => <button key={t} onClick={() => setTag(tag === t ? '' : t)} className={cn('rounded-full px-3 py-1 text-xs font-semibold', tag === t ? 'bg-accent text-accentfg' : 'bg-surface2 text-muted hover:text-fg')}>{t}</button>)}</div>}
+        {tags.length > 0 && <div className="no-scrollbar -mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">{tags.map((t) => <button key={t} onClick={() => { setTag(tag === t ? '' : t); setShown(60) }} className={cn('shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold', tag === t ? 'bg-accent text-accentfg' : 'bg-surface2 text-muted hover:text-fg')}>{t}</button>)}</div>}
         {songs.isLoading ? <PageLoader /> : list.length === 0 ? (
           <EmptyState icon={<Music2 className="h-6 w-6" />} title={(songs.data?.length ?? 0) === 0 ? 'Sua biblioteca está vazia' : 'Nenhuma música encontrada'}
             text={(songs.data?.length ?? 0) === 0 ? (isLeader ? 'Pesquise o nome de uma música para trazer capa, artista e link automaticamente — ou cadastre manualmente.' : 'O líder ainda não cadastrou músicas. Você pode enviar sugestões na aba ao lado.') : 'Ajuste a busca ou os filtros.'}
             action={isLeader && (songs.data?.length ?? 0) === 0 && <Button variant="primary" onClick={() => setAdd(true)}><Plus className="h-4 w-4" />Adicionar a primeira música</Button>} />
         ) : (
-          <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {list.map((s) => (
-              <div key={s.id} className="card flex items-center gap-3 p-3 transition hover:border-accent/60">
+          <><div className="stagger grid grid-cols-[minmax(0,1fr)] gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
+            {list.slice(0, shown).map((s) => (
+              <div key={s.id} className="card flex min-w-0 items-center gap-3 p-2.5 transition hover:border-accent/60 sm:p-3">
                 <button onClick={() => setView(s)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                  <Cover url={s.cover_url} size={60} />
+                  <Cover url={s.cover_url} size={56} />
                   <span className="min-w-0 flex-1"><span className="block truncate font-bold">{s.title}</span><span className="block truncate text-xs text-muted">{s.artist ?? 'Artista não informado'}</span>
                     <span className="mt-1.5 flex flex-wrap items-center gap-1.5">{(s.church_key || s.original_key) && <Badge tone="accent">{s.church_key || s.original_key}</Badge>}
                       {s.duration_seconds ? <span className="text-xs text-muted">{fmtDuration(s.duration_seconds)}</span> : null}{s.is_habitual && <Badge tone="ok">Habitual</Badge>}</span></span>
                 </button>
                 <IconButton label={favs.data?.has(s.id) ? 'Remover dos favoritos' : 'Favoritar'} onClick={() => void toggleFav(s)}><Heart className={cn('h-5 w-5', favs.data?.has(s.id) && 'fill-accent text-accent')} /></IconButton>
               </div>))}
-          </div>)}
+          </div>
+          {list.length > shown && <div className="mt-4 flex flex-col items-center gap-1"><Button variant="outline" onClick={() => setShown((n) => n + 60)}>Mostrar mais</Button><span className="text-xs text-muted">Mostrando {shown} de {list.length}</span></div>}
+          </>)}
       </>)}
       <AddSongModal open={add} onClose={() => setAdd(false)} onAdded={() => setAdd(false)} />
       <ImportPlaylistModal open={imp} onClose={() => setImp(false)} />

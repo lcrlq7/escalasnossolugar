@@ -177,7 +177,7 @@ export function Cover({ url, size = 48, className }: { url?: string | null; size
       </span>
     )
   }
-  return <img src={url} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBad(true)} style={{ width: size, height: size }} className={cn('shrink-0 rounded-lg object-cover', className)} />
+  return <img src={url} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBad(true)} style={{ width: size, height: size }} className={cn('shrink-0 rounded-lg bg-surface2 object-cover', className)} />
 }
 
 export function useDebounced<T>(value: T, ms = 300): T {
