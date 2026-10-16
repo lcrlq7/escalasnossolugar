@@ -37,7 +37,7 @@ export function IconButton({ label, className, children, ...rest }: ButtonHTMLAt
   )
 }
 
-export function Field({ label, hint, error, children, className }: { label?: string; hint?: string; error?: string; children: ReactNode; className?: string }) {
+export function Field({ label, hint, error, children, className }: { label?: string; hint?: string; error?: string; children?: ReactNode; className?: string }) {
   return (
     <label className={cn('block', className)}>
       {label && <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted">{label}</span>}
