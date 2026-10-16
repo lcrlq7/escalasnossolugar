@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ExternalLink, ListVideo, Music2, Youtube } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useToast } from '../context/Toast'
@@ -22,7 +22,9 @@ interface Cand { id: string; title: string; artist: string; album: string | null
 interface Found { song_id: string; known_id: string | null; candidates: Cand[]; error: string | null }
 
 export function PlaylistModal({ open, onClose, items, name }: { open: boolean; onClose: () => void; items: ResolvedItem[]; name?: string }) {
-  const { isLeader } = useAuth()
+  const { session } = useAuth()
+  const canPlan = useQuery({ queryKey: ['can-plan', session?.user.id], enabled: open && !!session, queryFn: async () => unwrap(await supabase.rpc('can_plan_playlists')) as boolean })
+  const isLeader = canPlan.data === true
   const toast = useToast()
   const [sp, setSp] = useState<{ configured: boolean; connected: boolean } | null>(null)
   const [found, setFound] = useState<Found[] | null>(null)
@@ -117,7 +119,7 @@ export function PlaylistModal({ open, onClose, items, name }: { open: boolean; o
           </div>
           <div className="rounded-xl border border-border p-4">
             <p className="flex items-center gap-2 font-bold"><Music2 className="h-5 w-5 text-ok" />Spotify</p>
-            {!isLeader ? <p className="mt-1 text-sm text-muted">Apenas líderes e administradores criam playlists no Spotify.</p>
+            {!isLeader ? <p className="mt-1 text-sm text-muted">Apenas líderes, administradores e o ministro responsável pela escala criam playlists no Spotify.</p>
               : !sp ? <div className="mt-3"><Spinner /></div>
               : !sp.configured ? <p className="mt-1 text-sm text-warn">A integração com o Spotify ainda não foi configurada no servidor (falta o Client Secret). Enquanto isso, use “Copiar links das músicas”.</p>
               : !sp.connected ? (<>

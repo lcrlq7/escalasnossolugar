@@ -85,7 +85,7 @@ function Row({ item, cats, readOnly, onChange, onRemove }: {
 export function SetlistEditor({ setlist, readOnly = false, eventType, onRenamed }: { setlist: Setlist; readOnly?: boolean; eventType?: EventType; onRenamed?: () => void }) {
   const qc = useQueryClient()
   const toast = useToast()
-  const { church } = useAuth()
+  const { church, isLeader } = useAuth()
   const cats = useCategories()
   const [picker, setPicker] = useState(false)
   const [auto, setAuto] = useState(false)
@@ -178,8 +178,8 @@ export function SetlistEditor({ setlist, readOnly = false, eventType, onRenamed 
           <Button variant="outline" onClick={() => setAuto(true)}><Wand2 className="h-4 w-4" />Montar automaticamente</Button>
         </>)}
         <div className="ml-auto flex flex-wrap items-center gap-1">
-          {!readOnly && <IconButton label="Copiar de outro repertório" onClick={() => setCopyOpen(true)}><Copy className="h-[18px] w-[18px]" /></IconButton>}
-          {!readOnly && <IconButton label="Salvar como repertório favorito" onClick={() => { setFavName(setlist.name); setFavOpen(true) }}><Star className="h-[18px] w-[18px]" /></IconButton>}
+          {!readOnly && isLeader && <IconButton label="Copiar de outro repertório" onClick={() => setCopyOpen(true)}><Copy className="h-[18px] w-[18px]" /></IconButton>}
+          {!readOnly && isLeader && <IconButton label="Salvar como repertório favorito" onClick={() => { setFavName(setlist.name); setFavOpen(true) }}><Star className="h-[18px] w-[18px]" /></IconButton>}
           <IconButton label="Copiar link de visualização" onClick={copyLink}><Link2 className="h-[18px] w-[18px]" /></IconButton>
           <IconButton label="Exportar PDF" disabled={!order.length} onClick={() => exportSetlistPdf({ church: church?.name ?? '', title: setlist.name, items: resolved })}><FileDown className="h-[18px] w-[18px]" /></IconButton>
           <Button variant="outline" disabled={!order.length} onClick={() => setPlaylist(true)}><ListVideo className="h-4 w-4" />Criar playlist</Button>

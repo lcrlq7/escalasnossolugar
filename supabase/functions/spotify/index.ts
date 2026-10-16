@@ -71,9 +71,17 @@ Deno.serve(async (req) => {
   }
 
   if (body.action === 'connect') {
-    // só usuários ativos com cargo de líder/admin criam playlists
+    // líderes/admins, ou o ministro responsável por alguma escala ativa, criam playlists
     const { data: ok } = await admin.from('user_roles').select('role').eq('user_id', uid).in('role', ['admin', 'leader']).limit(1)
-    if (!ok?.length) return json({ error: 'Apenas líderes e administradores podem conectar o Spotify.' }, 403)
+    let allowed = !!ok?.length
+    if (!allowed) {
+      const { data: m } = await admin.from('members').select('id').eq('profile_id', uid).eq('active', true).maybeSingle()
+      if (m) {
+        const { data: ev } = await admin.from('events').select('id').eq('leader_member_id', m.id).neq('status', 'cancelled').limit(1)
+        allowed = !!ev?.length
+      }
+    }
+    if (!allowed) return json({ error: 'Apenas líderes, administradores e ministros responsáveis por uma escala podem conectar o Spotify.' }, 403)
     const state = crypto.randomUUID()
     const returnTo = typeof body.returnTo === 'string' ? body.returnTo.slice(0, 300) : '/'
     await admin.from('oauth_states').insert({ state, user_id: uid, provider: 'spotify', return_to: returnTo })

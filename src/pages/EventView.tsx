@@ -16,6 +16,7 @@ import type { SetlistItem } from '../types'
 import { Avatar, Badge, Button, Card, Cover, EmptyState, Modal, PageLoader, SectionTitle, Textarea, Toggle } from '../components/ui'
 import { statusTone } from './Events'
 import { SwapModal } from '../components/SwapModal'
+import { SetlistEditor } from '../components/SetlistEditor'
 
 export default function EventView() {
   const { id } = useParams()
@@ -49,6 +50,7 @@ export default function EventView() {
   const peopleIds = new Set(team.map((a) => a.member_id))
   const confirmedIds = new Set(team.filter((a) => a.status === 'confirmed').map((a) => a.member_id))
   const tot = totalSeconds(resolved)
+  const isEventLead = !!member?.id && member.id === e.leader_member_id && e.status !== 'cancelled'
   const canTech = isLeader || (isTech && e.status !== 'draft')
   const canRespond = mine.length > 0 && e.status === 'published'
   const myState = mine.some((m) => m.status === 'declined') ? 'declined' : mine.length && mine.every((m) => m.status === 'confirmed') ? 'confirmed' : 'pending'
@@ -147,7 +149,10 @@ export default function EventView() {
 
         <Card className="p-5">
           <SectionTitle title="Repertório" subtitle={resolved.length ? `${resolved.filter((r) => r.kind === 'song').length} músicas · ${fmtTotal(tot.total)} · ${resolved.filter((r) => r.kind === 'song' && r.rehearsed).length} ensaiadas` : undefined} />
-          {resolved.length === 0 ? <EmptyState title="Repertório ainda não definido" /> : (
+          {isEventLead && !isLeader && sl.data ? (<>
+            <p className="mb-3 rounded-xl bg-accent/10 px-3 py-2 text-sm">Você é o ministro responsável por esta escala: monte o repertório, ajuste os tons e crie a playlist.</p>
+            <SetlistEditor setlist={sl.data} eventType={e.event_type} />
+          </>) : resolved.length === 0 ? <EmptyState title="Repertório ainda não definido" /> : (
             <ol className="space-y-2">
               {resolved.map((r, n) => (
                 <li key={r.id} className="flex items-center gap-3 rounded-xl border border-border p-2.5">
