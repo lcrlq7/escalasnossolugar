@@ -8,6 +8,7 @@ import { useToast } from '../context/Toast'
 import { useFavorites, useSongs } from '../lib/queries'
 import { useSongUsage } from '../lib/usage'
 import { AddSongModal, SongFormModal } from '../components/SongForm'
+import { ImportPlaylistModal } from '../components/ImportPlaylistModal'
 import { addDays, cn, fmtDate, fmtDuration, normalize, todayStr } from '../lib/utils'
 import type { Song } from '../types'
 import { Badge, Button, ConfirmDialog, Cover, EmptyState, Field, IconButton, Input, Modal, PageHeader, PageLoader, Tabs, Textarea } from '../components/ui'
@@ -127,6 +128,7 @@ export default function Songs() {
   const [only, setOnly] = useState<'all' | 'fav' | 'habitual' | 'archived'>('all')
   const [tag, setTag] = useState('')
   const [add, setAdd] = useState(false)
+  const [imp, setImp] = useState(false)
   const [view, setView] = useState<Song | null>(null)
   const [edit, setEdit] = useState<Song | null>(null)
 
@@ -152,7 +154,7 @@ export default function Songs() {
   return (
     <div>
       <PageHeader title="Músicas" subtitle="Biblioteca do ministério: letras, tons, links e histórico de uso."
-        actions={isLeader && tab === 'lib' && <Button variant="primary" onClick={() => setAdd(true)}><Plus className="h-4 w-4" />Adicionar música</Button>} />
+        actions={isLeader && tab === 'lib' && <><Button variant="outline" onClick={() => setImp(true)}>Importar playlist</Button><Button variant="primary" onClick={() => setAdd(true)}><Plus className="h-4 w-4" />Adicionar música</Button></>} />
       <Tabs value={tab === 'sug' ? 'sug' : 'lib'} onChange={(v) => setSp(v === 'sug' ? { aba: 'sugestoes' } : {})} items={[{ value: 'lib', label: 'Biblioteca', count: (songs.data ?? []).filter((s) => !s.archived).length }, { value: 'sug', label: 'Sugestões' }]} />
       {tab === 'sug' ? <Suggestions /> : (<>
         <div className="mb-4 flex flex-wrap gap-2">
@@ -182,6 +184,7 @@ export default function Songs() {
           </div>)}
       </>)}
       <AddSongModal open={add} onClose={() => setAdd(false)} onAdded={() => setAdd(false)} />
+      <ImportPlaylistModal open={imp} onClose={() => setImp(false)} />
       {view && !edit && <SongDetail song={view} onClose={() => setView(null)} onEdit={() => setEdit(view)} />}
       <SongFormModal open={!!edit} song={edit} onClose={() => { setEdit(null); setView(null) }} />
     </div>
