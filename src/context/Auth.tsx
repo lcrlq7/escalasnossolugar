@@ -71,10 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthState>(() => ({
     loading, session, profile, roles, church, member, recovery,
-    hasRole: (r) => roles.includes(r),
+    hasRole: (r) => roles.includes('admin') || roles.includes(r),
     isAdmin: roles.includes('admin'),
     isLeader: roles.includes('admin') || roles.includes('leader'),
-    isTech: roles.includes('sound_tech'),
+    isTech: roles.includes('admin') || roles.includes('sound_tech'),
     refresh: async () => { await load(session?.user.id ?? null) },
     signOut: async () => { await supabase.auth.signOut(); setRecovery(false) },
   }), [loading, session, profile, roles, church, member, recovery, load])

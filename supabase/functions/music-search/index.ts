@@ -39,9 +39,13 @@ async function fetchJson(url: string, init?: RequestInit, ms = 8000) {
   } finally { clearTimeout(t) }
 }
 
-async function itunes(q: string): Promise<R[]> {
-  const d = await fetchJson(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=song&country=BR&limit=10`)
-  return (d.results ?? []).map((x: Record<string, unknown>) => ({
+// Gêneros considerados música cristã (iTunes/Spotify usam nomes em PT/EN).
+const GOSPEL = /gospel|crist|christian|religio|worship|louvor|adora|ccm|praise|hymn|hino/i
+
+async function itunes(q: string, gospelOnly: boolean): Promise<R[]> {
+  const d = await fetchJson(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=song&country=BR&limit=50`)
+  const rows = (d.results ?? []).filter((x: Record<string, unknown>) => !gospelOnly || GOSPEL.test(String(x.primaryGenreName ?? ''))).slice(0, 12)
+  return rows.map((x: Record<string, unknown>) => ({
     source: 'itunes' as const,
     title: String(x.trackName ?? ''),
     artist: (x.artistName as string) ?? null,
@@ -53,8 +57,9 @@ async function itunes(q: string): Promise<R[]> {
   })).filter((r: R) => r.title)
 }
 
-async function youtube(q: string, key: string): Promise<R[]> {
-  const s = await fetchJson(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=6&q=${encodeURIComponent(q)}&key=${key}`)
+async function youtube(q: string, key: string, gospelOnly: boolean): Promise<R[]> {
+  const term = gospelOnly && !GOSPEL.test(q) ? `${q} louvor gospel` : q
+  const s = await fetchJson(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=6&q=${encodeURIComponent(term)}&key=${key}`)
   const ids = (s.items ?? []).map((i: { id: { videoId: string } }) => i.id.videoId).filter(Boolean)
   const dur: Record<string, number> = {}
   if (ids.length) {
@@ -79,15 +84,25 @@ async function youtube(q: string, key: string): Promise<R[]> {
   }))
 }
 
-async function spotify(q: string, id: string, secret: string): Promise<R[]> {
+async function spotify(q: string, id: string, secret: string, gospelOnly: boolean): Promise<R[]> {
   const tok = await fetchJson('https://accounts.spotify.com/api/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: `Basic ${btoa(`${id}:${secret}`)}` },
     body: 'grant_type=client_credentials',
   })
-  const d = await fetchJson(`https://api.spotify.com/v1/search?type=track&limit=8&market=BR&q=${encodeURIComponent(q)}`,
-    { headers: { Authorization: `Bearer ${tok.access_token}` } })
-  return (d.tracks?.items ?? []).map((t: { id: string; name: string; artists: { name: string }[]; album: { name: string; images: { url: string }[] }; duration_ms: number; external_urls: { spotify: string } }) => ({
+  const auth = { headers: { Authorization: `Bearer ${tok.access_token}` } }
+  const d = await fetchJson(`https://api.spotify.com/v1/search?type=track&limit=${gospelOnly ? 20 : 8}&market=BR&q=${encodeURIComponent(q)}`, auth)
+  let items = d.tracks?.items ?? []
+  if (gospelOnly) {
+    const ids = [...new Set(items.flatMap((t: { artists: { id: string }[] }) => t.artists.map((a) => a.id)))].slice(0, 50)
+    const g: Record<string, boolean> = {}
+    if (ids.length) {
+      const ar = await fetchJson(`https://api.spotify.com/v1/artists?ids=${ids.join(',')}`, auth)
+      for (const a of ar.artists ?? []) g[a.id] = (a.genres ?? []).some((x: string) => GOSPEL.test(x))
+    }
+    items = items.filter((t: { artists: { id: string }[] }) => t.artists.some((a) => g[a.id])).slice(0, 8)
+  }
+  return items.map((t: { id: string; name: string; artists: { name: string }[]; album: { name: string; images: { url: string }[] }; duration_ms: number; external_urls: { spotify: string } }) => ({
     source: 'spotify' as const,
     title: t.name,
     artist: t.artists.map((a) => a.name).join(', ') || null,
@@ -115,7 +130,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'Método não permitido' }, 405)
   let q = ''
-  try { q = String((await req.json()).q ?? '').trim().slice(0, 150) } catch { return json({ error: 'Requisição inválida' }, 400) }
+  let gospelOnly = true
+  try { const b = await req.json(); q = String(b.q ?? '').trim().slice(0, 150); gospelOnly = b.gospelOnly !== false } catch { return json({ error: 'Requisição inválida' }, 400) }
   if (q.length < 2) return json({ results: [], sources: {} })
 
   const yk = Deno.env.get('YOUTUBE_API_KEY')
@@ -130,10 +146,10 @@ Deno.serve(async (req) => {
   }
 
   const jobs: Promise<void>[] = []
-  jobs.push(itunes(q).then((r) => { results.push(...r); sources.itunes = 'ok' }).catch(() => { sources.itunes = 'indisponível' }))
-  if (yk) jobs.push(youtube(q, yk).then((r) => { results.push(...r); sources.youtube = 'ok' }).catch(() => { sources.youtube = 'indisponível (verifique a chave/cota)' }))
+  jobs.push(itunes(q, gospelOnly).then((r) => { results.push(...r); sources.itunes = 'ok' }).catch(() => { sources.itunes = 'indisponível' }))
+  if (yk) jobs.push(youtube(q, yk, gospelOnly).then((r) => { results.push(...r); sources.youtube = 'ok' }).catch(() => { sources.youtube = 'indisponível (verifique a chave/cota)' }))
   else sources.youtube = 'não configurado — cole o link do vídeo na busca'
-  if (sid && ssec) jobs.push(spotify(q, sid, ssec).then((r) => { results.push(...r); sources.spotify = 'ok' }).catch(() => { sources.spotify = 'indisponível' }))
+  if (sid && ssec) jobs.push(spotify(q, sid, ssec, gospelOnly).then((r) => { results.push(...r); sources.spotify = 'ok' }).catch(() => { sources.spotify = 'indisponível' }))
   else sources.spotify = 'não configurado'
   await Promise.all(jobs)
 

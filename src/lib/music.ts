@@ -3,8 +3,8 @@ import type { ExternalResult } from '../types'
 
 export interface SearchResponse { results: ExternalResult[]; sources: Record<string, string> }
 
-export async function searchMusic(q: string): Promise<SearchResponse> {
-  const { data, error } = await supabase.functions.invoke('music-search', { body: { q } })
+export async function searchMusic(q: string, gospelOnly = true): Promise<SearchResponse> {
+  const { data, error } = await supabase.functions.invoke('music-search', { body: { q, gospelOnly } })
   if (error) throw new Error('A pesquisa externa está indisponível no momento. Você pode cadastrar a música manualmente.')
   return data as SearchResponse
 }

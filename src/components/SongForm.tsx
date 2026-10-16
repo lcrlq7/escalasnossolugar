@@ -150,6 +150,7 @@ export function AddSongModal({ open, onClose, onAdded, initialQuery = '' }:
   const songs = useSongs()
   const [q, setQ] = useState(initialQuery)
   const [busy, setBusy] = useState(false)
+  const [gospel, setGospel] = useState(true)
   const [results, setResults] = useState<ExternalResult[] | null>(null)
   const [sources, setSources] = useState<Record<string, string>>({})
   const [sel, setSel] = useState<string[]>([])
@@ -166,7 +167,7 @@ export function AddSongModal({ open, onClose, onAdded, initialQuery = '' }:
   const run = async () => {
     if (q.trim().length < 2) return
     setBusy(true); setSel([])
-    try { const r = await searchMusic(q.trim()); setResults(r.results); setSources(r.sources) }
+    try { const r = await searchMusic(q.trim(), gospel); setResults(r.results); setSources(r.sources) }
     catch (e) { toast.error(e); setResults([]) } finally { setBusy(false) }
   }
   const chosen = (results ?? []).filter((r) => sel.includes(r.external_ref))
@@ -188,6 +189,8 @@ export function AddSongModal({ open, onClose, onAdded, initialQuery = '' }:
         <Button variant="primary" type="submit" loading={busy}><Search className="h-4 w-4" />Pesquisar</Button>
       </form>
 
+      <div className="mt-3"><Toggle checked={gospel} onChange={setGospel} label="Somente música cristã / gospel (oculta músicas seculares)" /></div>
+
       {local.length > 0 && (
         <div className="mt-4">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Já cadastradas na biblioteca</p>
@@ -203,7 +206,7 @@ export function AddSongModal({ open, onClose, onAdded, initialQuery = '' }:
       <div className="mt-4">
         {busy && <div className="flex justify-center py-8"><Spinner /></div>}
         {!busy && results && results.length === 0 && (
-          <EmptyState title="Nenhum resultado encontrado" text="Tente outro termo ou cadastre a música manualmente. Capas, tons e links não são inventados: o que não for encontrado fica em branco." />
+          <EmptyState title="Nenhum resultado encontrado" text="Tente outro termo, cole o link do YouTube ou cadastre a música manualmente. O filtro de música cristã pode ocultar resultados sem gênero identificado. Capas, tons e links não são inventados: o que não for encontrado fica em branco." />
         )}
         {!busy && results && results.length > 0 && (
           <>
