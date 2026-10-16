@@ -41,4 +41,3 @@ export function nextWeekday(weekday: number, from = new Date()): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-export const errorsOf = (a: Alert[] = []) => a.filter((x) => x.severity === 'error')

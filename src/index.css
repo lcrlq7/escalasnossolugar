@@ -83,9 +83,6 @@ a.card:hover, button.card:hover, .card.lift:hover { transform: translateY(-3px);
 .nav-active { animation: nav-pop .35s cubic-bezier(.2,.9,.3,1.4); }
 @keyframes nav-pop { 0% { transform: translateY(4px) scale(.85); } 100% { transform: none; } }
 .press { transition: transform .15s ease; } .press:active { transform: scale(.94); }
-.row-hover { transition: background-color .2s ease, transform .2s ease; } .row-hover:hover { background-color: rgb(var(--surface2) / .7); transform: translateX(3px); }
-.skeleton { background: linear-gradient(90deg, rgb(var(--surface2)) 25%, rgb(var(--border)) 50%, rgb(var(--surface2)) 75%); background-size: 200% 100%; animation: skel 1.4s ease-in-out infinite; }
-@keyframes skel { from { background-position: 200% 0 } to { background-position: -200% 0 } }
 @keyframes toast-in { from { opacity: 0; transform: translateY(16px) scale(.95); } to { opacity: 1; transform: none; } }
 .toast-in { animation: toast-in .3s cubic-bezier(.2,.9,.3,1.2) backwards; }
 @keyframes drawer-in { from { transform: translateY(100%); } to { transform: none; } }
@@ -108,7 +105,6 @@ a.card:hover, button.card:hover, .card.lift:hover { transform: translateY(-3px);
 @keyframes wave { 0%,60%,100% { transform: rotate(0) } 10%,30% { transform: rotate(16deg) } 20%,40% { transform: rotate(-10deg) } 50% { transform: rotate(8deg) } }
 .grad-text { background: linear-gradient(100deg, rgb(var(--fg)) 0%, rgb(var(--accent)) 45%, rgb(var(--fg)) 90%); background-size: 220% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: grad-move 6s linear infinite; }
 @keyframes grad-move { to { background-position: -220% center; } }
-.btn-primary-glow { box-shadow: 0 8px 22px -8px rgb(var(--accent) / .7); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }

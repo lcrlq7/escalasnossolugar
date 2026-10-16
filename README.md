@@ -53,6 +53,17 @@ Segredos ficam só no Supabase (`supabase secrets set ...`), nunca no front-end:
 Funções `spotify` e `spotify-callback`. Crie um app em developer.spotify.com/dashboard com o Redirect URI
 `https://SEU-PROJETO.supabase.co/functions/v1/spotify-callback`, cadastre `SPOTIFY_CLIENT_ID` e `SPOTIFY_CLIENT_SECRET` nos Secrets e, em *User Management* do app, os e-mails de quem vai usar (modo de desenvolvimento). Em seguida, no repertório: **Criar playlist → Conectar Spotify**. Os tokens ficam na tabela `music_connections`, sem acesso pelo navegador. Sem essa configuração, o botão mostra o aviso e oferece “Copiar links”. A criação no YouTube usa um link `watch_videos` (sem login); a criação direta via YouTube Data API **não está implementada**.
 
+### Importar playlist para a biblioteca
+
+**Músicas → Importar playlist.** Cole o link de uma playlist do Spotify (pública; usa a página pública quando a API nega leitura, até ~100 faixas) ou do YouTube (exige `YOUTUBE_API_KEY` nos Secrets). Músicas que já existem são ignoradas. **Buscar capas** preenche capas faltantes via oEmbed do Spotify.
+
+### Segurança
+
+- Todas as tabelas têm RLS; usuários não aprovados não enxergam dados da igreja; colunas sensíveis de `profiles` não são editáveis pelo próprio usuário.
+- Links salvos só aceitam `http(s)` (front + constraints no banco). `vercel.json` define CSP, HSTS, anti-iframe e demais cabeçalhos.
+- Captcha opcional (hCaptcha): defina `VITE_HCAPTCHA_SITEKEY` na Vercel **e** ligue o captcha em *Authentication → Attack Protection* com o *secret* no Supabase. Ligue sempre os dois lados.
+- Ative também *Leaked password protection* e senha mínima ≥ 8 em *Authentication → Providers → Email* (se o plano permitir).
+
 *Configurações → Integrações* testa o estado de cada fonte. Dados que a fonte não fornece (tom, BPM, letra) ficam em branco para preenchimento manual — nada é inventado.
 
 ## Deploy (Vercel)

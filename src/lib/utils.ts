@@ -47,9 +47,6 @@ export const todayStr = () => toISODate(new Date())
 export function addDays(d: string, n: number): string {
   const dt = parseDate(d); dt.setDate(dt.getDate() + n); return toISODate(dt)
 }
-export function weekdayLong(d: string): string {
-  return new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(parseDate(d))
-}
 export function fmtDateLong(d: string): string {
   return new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(parseDate(d))
 }
@@ -80,9 +77,6 @@ export function parseDuration(v: string): number | null {
 export const normalize = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
 
-export function initials(name: string): string {
-  return name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('')
-}
 export function isUrl(v: string): boolean {
   try { const u = new URL(v); return u.protocol === 'http:' || u.protocol === 'https:' } catch { return false }
 }

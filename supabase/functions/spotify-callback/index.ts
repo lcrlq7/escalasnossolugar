@@ -10,12 +10,18 @@ Deno.serve(async (req) => {
   const state = url.searchParams.get('state')
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const back = (path: string, ok: boolean) => {
-    const safe = path.startsWith('/') && !path.startsWith('//') ? path : '/'
-    const u = new URL(safe, APP_URL)
+    let u = new URL('/', APP_URL)
+    try {
+      const c = new URL(path, APP_URL)
+      // Só aceita caminhos do próprio site (bloqueia //host, /\host e esquemas externos)
+      if (c.origin === u.origin && path.startsWith('/') && !/^\/[\/\\]/.test(path)) u = c
+    } catch { /* usa a raiz */ }
     u.searchParams.set('spotify', ok ? 'ok' : 'erro')
     return Response.redirect(u.toString(), 302)
   }
   if (!state) return back('/', false)
+  // limpa estados antigos (>1h)
+  await admin.from('oauth_states').delete().lt('created_at', new Date(Date.now() - 3600_000).toISOString())
   const { data: st } = await admin.from('oauth_states').select('*').eq('state', state).eq('provider', 'spotify').maybeSingle()
   if (!st) return back('/', false)
   await admin.from('oauth_states').delete().eq('state', state)
