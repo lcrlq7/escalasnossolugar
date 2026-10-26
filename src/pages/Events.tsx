@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarPlus, CalendarRange, ClipboardList, Clock, MapPin, Search, Users } from 'lucide-react'
+import { CalendarPlus, CalendarRange, FileDown, ClipboardList, Clock, MapPin, Search, Users } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { useSchedules } from '../lib/queries'
+import { exportMonthPdf, type MonthEvent } from '../lib/pdf'
 import { EVENT_TYPES, STATUS_LABEL, cn, fmtTime, normalize, parseDate, todayStr } from '../lib/utils'
 import type { EventRow, EventStatus, ResponseStatus } from '../types'
-import { Badge, Button, EmptyState, Fab, Field, Input, Modal, PageHeader, PageLoader, Select, Tabs } from '../components/ui'
+import { Badge, Button, EmptyState, Fab, Field, Input, Modal, PageHeader, PageLoader, Select, Tabs, Toggle } from '../components/ui'
 
 export type EventListItem = EventRow & { event_assignments: { member_id: string; status: ResponseStatus }[] }
 
@@ -44,6 +45,57 @@ export function EventCard({ e }: { e: EventListItem; myMemberId?: string | null 
         </div>
       </div>
     </Link>
+  )
+}
+
+function MonthPdfModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const toast = useToast()
+  const { church } = useAuth()
+  const [month, setMonth] = useState(todayStr().slice(0, 7))
+  const [drafts, setDrafts] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const go = async () => {
+    if (!/^\d{4}-\d{2}$/.test(month)) return toast.error('Escolha o mês.')
+    setBusy(true)
+    try {
+      const [y, m] = month.split('-').map(Number)
+      const last = new Date(y, m, 0).getDate()
+      const rows = unwrap(await supabase.from('events')
+        .select('title, event_date, start_time, end_time, location, status, leader:members!leader_member_id(full_name), event_assignments(member:members(full_name), function:worship_functions(name, sort_order)), setlists(setlist_items(position, kind, key_override, song:songs(title, church_key, original_key)))')
+        .gte('event_date', `${month}-01`).lte('event_date', `${month}-${String(last).padStart(2, '0')}`)
+        .in('status', drafts ? ['published', 'completed', 'draft'] : ['published', 'completed'])
+        .order('event_date').order('start_time')) as unknown as {
+          title: string; event_date: string; start_time: string; end_time: string | null; location: string | null; status: string
+          leader: { full_name: string } | { full_name: string }[] | null
+          event_assignments: { member: { full_name: string } | { full_name: string }[] | null; function: { name: string; sort_order: number } | { name: string; sort_order: number }[] | null }[]
+          setlists: { setlist_items: { position: number; kind: string; key_override: string | null; song: { title: string; church_key: string | null; original_key: string | null } | { title: string; church_key: string | null; original_key: string | null }[] | null }[] }[] | { setlist_items: { position: number; kind: string; key_override: string | null; song: { title: string; church_key: string | null; original_key: string | null } | { title: string; church_key: string | null; original_key: string | null }[] | null }[] } | null
+        }[]
+      const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null)
+      const events: MonthEvent[] = rows.map((r) => {
+        const sl = one(r.setlists)
+        return {
+          title: r.title, event_date: r.event_date, start_time: r.start_time, end_time: r.end_time, location: r.location, status: r.status,
+          leader: one(r.leader)?.full_name ?? null,
+          team: r.event_assignments.map((a) => ({ role: one(a.function)?.name ?? '', order: one(a.function)?.sort_order ?? 99, name: one(a.member)?.full_name ?? '' })),
+          songs: (sl?.setlist_items ?? []).filter((i) => i.kind === 'song').sort((a, b) => a.position - b.position).map((i) => {
+            const sg = one(i.song); return { title: sg?.title ?? '', key: i.key_override || sg?.church_key || sg?.original_key || null }
+          }),
+        }
+      })
+      const label = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date(y, m - 1, 1))
+      exportMonthPdf({ church: church?.name ?? '', monthLabel: label, month, events })
+      onClose()
+    } catch (e) { toast.error(e) } finally { setBusy(false) }
+  }
+  return (
+    <Modal open={open} onClose={onClose} size="sm" title="PDF da escala do mês"
+      footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" loading={busy} onClick={() => void go()}><FileDown className="h-4 w-4" />Gerar PDF</Button></>}>
+      <div className="space-y-4">
+        <Field label="Mês"><Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} /></Field>
+        <Toggle checked={drafts} onChange={setDrafts} label="Incluir rascunhos" />
+        <p className="text-xs text-muted">Todos os cultos do mês, com ministro, equipe por função e repertório. Escalas canceladas não entram.</p>
+      </div>
+    </Modal>
   )
 }
 
@@ -89,6 +141,7 @@ export default function Events() {
   const { isLeader, member } = useAuth()
   const nav = useNavigate()
   const [rec, setRec] = useState(false)
+  const [monthPdf, setMonthPdf] = useState(false)
   const [tab, setTab] = useState<'next' | 'draft' | 'past' | 'cancelled'>('next')
   const [q, setQ] = useState('')
   const query = useQuery({
@@ -117,8 +170,9 @@ export default function Events() {
   return (
     <div>
       <PageHeader title="Escalas" subtitle="Cultos, ensaios e eventos do ministério de louvor."
-        actions={isLeader && <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setRec(true)}><CalendarRange className="h-4 w-4" />Recorrentes</Button><Link to="/escalas/nova"><Button variant="primary"><CalendarPlus className="h-4 w-4" />Nova escala</Button></Link></div>} />
+        actions={isLeader && <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setMonthPdf(true)}><FileDown className="h-4 w-4" />PDF do mês</Button><Button variant="outline" onClick={() => setRec(true)}><CalendarRange className="h-4 w-4" />Recorrentes</Button><Link to="/escalas/nova"><Button variant="primary"><CalendarPlus className="h-4 w-4" />Nova escala</Button></Link></div>} />
       <RecurringModal open={rec} onClose={() => setRec(false)} />
+      <MonthPdfModal open={monthPdf} onClose={() => setMonthPdf(false)} />
       <div className="mb-4 relative"><Search className="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-muted" /><Input className="!pl-10" placeholder="Buscar por nome, tipo ou local" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       {isLeader && <Fab label="Nova escala" onClick={() => nav('/escalas/nova')}><CalendarPlus className="h-6 w-6" /></Fab>}
       <Tabs value={tab} onChange={setTab} items={items} />

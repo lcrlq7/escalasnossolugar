@@ -110,7 +110,7 @@ export default function Reports() {
           <table className="w-full min-w-[32rem] text-sm"><thead><tr className="border-b border-border text-left text-xs uppercase text-muted"><th className="py-2">Integrante</th><th>No período</th><th>Últimos 30 dias</th><th>Última vez</th><th>Situação</th></tr></thead>
             <tbody>{att.data!.map((m) => {
               const days = m.last_served ? Math.floor((Date.now() - new Date(`${m.last_served}T12:00:00`).getTime()) / 86400000) : null
-              return (<tr key={m.member_id} className="border-b border-border/60 last:border-0"><td className="py-2 font-semibold">{m.full_name}</td><td>{m.total}</td><td>{m.last_30}</td>
+              return (<tr key={m.member_id} className="border-b border-border/60 last:border-0"><td className="py-2 font-semibold">{m.full_name}</td><td className="pr-4"><div className="flex items-center gap-2"><span className="w-5 font-bold">{m.total}</span><div className="h-1.5 w-24 overflow-hidden rounded-full bg-surface2"><div className="h-full rounded-full bg-accent" style={{ width: `${(m.total / Math.max(1, ...(att.data ?? []).map((x) => x.total))) * 100}%` }} /></div></div></td><td>{m.last_30}</td>
                 <td>{m.last_served ? fmtDate(m.last_served) : '—'}</td>
                 <td>{m.last_30 >= 4 ? <Badge tone="warn">Sobrecarregado(a)</Badge> : days === null || days > 45 ? <Badge tone="info">Descansado(a)</Badge> : <Badge tone="ok">Em dia</Badge>}</td></tr>)
             })}</tbody></table>)}</Card>

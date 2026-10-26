@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Mail, Pencil, Phone, Plus, Search, Trash2, UserCheck } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { useFunctions, useMembers } from '../lib/queries'
-import { cn, normalize } from '../lib/utils'
+import { cn, normalize, todayStr } from '../lib/utils'
 import type { Member } from '../types'
 import { Avatar, Badge, Button, ConfirmDialog, EmptyState, Field, Input, Modal, PageHeader, PageLoader, Textarea, Toggle } from '../components/ui'
 
@@ -80,6 +80,15 @@ export default function Members() {
   const { isLeader: isAdmin } = useAuth()
   const members = useMembers()
   const fns = useFunctions()
+  // medidor: quantas vezes cada pessoa está escalada no mês (só líder/admin)
+  const ym = todayStr().slice(0, 7)
+  const monthEnd = `${ym}-${String(new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)), 0).getDate()).padStart(2, '0')}`
+  const usage = useQuery({
+    queryKey: ['attendance-month', ym], enabled: isAdmin,
+    queryFn: async () => (unwrap(await supabase.rpc('attendance_report', { p_from: `${ym}-01`, p_to: monthEnd })) ?? []) as { member_id: string; total: number }[],
+  })
+  const count = useMemo(() => new Map((usage.data ?? []).map((u) => [u.member_id, u.total])), [usage.data])
+  const maxCount = Math.max(1, ...(usage.data ?? []).map((u) => u.total))
   const [q, setQ] = useState('')
   const [edit, setEdit] = useState<Member | null>(null)
   const [open, setOpen] = useState(false)
@@ -107,6 +116,11 @@ export default function Members() {
                   <div className="mt-0.5 flex flex-wrap gap-1.5">{m.profile_id && <Badge tone="ok"><UserCheck className="h-3 w-3" />Com acesso</Badge>}{!m.active && <Badge tone="warn">Inativo</Badge>}</div></div>
                 {isAdmin && <button aria-label={`Editar ${m.full_name}`} onClick={() => { setEdit(m); setOpen(true) }} className="rounded-lg p-2 text-muted hover:bg-surface2 hover:text-fg"><Pencil className="h-4 w-4" /></button>}
               </div>
+              {isAdmin && m.active && (
+                <div className="mt-3" title="Vezes escalado(a) neste mês">
+                  <div className="mb-1 flex items-center justify-between text-xs"><span className="text-muted">Escalas no mês</span><b className={cn(count.get(m.id) && (count.get(m.id) ?? 0) >= 4 ? 'text-warn' : 'text-fg')}>{count.get(m.id) ?? 0}</b></div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-surface2"><div className={cn('h-full rounded-full transition-all', (count.get(m.id) ?? 0) >= 4 ? 'bg-warn' : 'bg-accent')} style={{ width: `${((count.get(m.id) ?? 0) / maxCount) * 100}%` }} /></div>
+                </div>)}
               <div className="mt-3 flex flex-wrap gap-1.5">{m.member_functions?.map((x) => <Badge key={x.function_id} tone="accent">{fname.get(x.function_id)}</Badge>)}{!m.member_functions?.length && <span className="text-xs text-muted">Sem funções definidas</span>}</div>
               {(m.phone || m.email) && <div className="mt-3 space-y-1 text-xs text-muted">
                 {m.phone && <a className="flex items-center gap-1.5 hover:text-fg" href={`tel:${m.phone}`}><Phone className="h-3.5 w-3.5" />{m.phone}</a>}

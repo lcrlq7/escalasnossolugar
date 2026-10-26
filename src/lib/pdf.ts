@@ -87,3 +87,56 @@ export function exportEventPdf(opts: {
   }
   doc.save(`${opts.title.replace(/[^\w\- ]+/g, '').trim() || 'escala'}.pdf`)
 }
+
+export interface MonthEvent {
+  title: string; event_date: string; start_time: string; end_time: string | null; location: string | null; status: string
+  leader: string | null
+  team: { role: string; name: string; order: number }[]
+  songs: { title: string; key: string | null }[]
+}
+
+const WD = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+
+/** PDF com todas as escalas do mês: um bloco por culto (data, ministro, equipe por função e repertório). */
+export function exportMonthPdf(opts: { church: string; monthLabel: string; month: string; events: MonthEvent[] }) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  header(doc, opts.church, `Escala de ${opts.monthLabel}`, `${opts.events.length} ${opts.events.length === 1 ? 'culto' : 'cultos'}`)
+  let y = 46
+  const ensure = (h: number) => { if (y + h > 280) { doc.addPage(); y = 16 } }
+  if (opts.events.length === 0) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(90, 90, 90)
+    doc.text('Nenhuma escala neste mês.', 14, y)
+  }
+  for (const e of opts.events) {
+    const d = new Date(`${e.event_date}T12:00:00`)
+    const when = `${WD[d.getDay()]}, ${e.event_date.slice(8, 10)}/${e.event_date.slice(5, 7)} · ${e.start_time.slice(0, 5)}${e.end_time ? ` – ${e.end_time.slice(0, 5)}` : ''}`
+    const groups: { role: string; names: string[] }[] = []
+    for (const t of [...e.team].sort((a, b) => a.order - b.order)) {
+      const g = groups.find((x) => x.role === t.role)
+      if (g) g.names.push(t.name); else groups.push({ role: t.role, names: [t.name] })
+    }
+    ensure(30 + groups.length * 7)
+    doc.setFillColor(...GOLD); doc.rect(14, y, 1.6, 9, 'F')
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...DARK)
+    doc.text(`${when}  ·  ${e.title}`, 18, y + 4)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90, 90, 90)
+    const meta = [e.leader ? `Ministro: ${e.leader}` : null, e.location, e.status === 'draft' ? 'Rascunho' : null].filter(Boolean).join('  ·  ')
+    if (meta) doc.text(meta, 18, y + 8.5)
+    y += 12
+    autoTable(doc, {
+      startY: y, head: [['Função', 'Integrantes']], body: groups.length ? groups.map((g) => [g.role, g.names.join(', ')]) : [['', 'Equipe ainda não definida']],
+      headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontSize: 8.5 }, alternateRowStyles: { fillColor: [247, 247, 244] },
+      styles: { fontSize: 9, cellPadding: 1.8 }, columnStyles: { 0: { cellWidth: 38, fontStyle: 'bold' } }, margin: { left: 14, right: 14 },
+    })
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3
+    if (e.songs.length) {
+      const line = `Repertório: ${e.songs.map((s) => (s.key ? `${s.title} (${s.key})` : s.title)).join('  ·  ')}`
+      const lines = doc.splitTextToSize(line, 182) as string[]
+      ensure(lines.length * 4.5 + 4)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(60, 60, 60)
+      doc.text(lines, 14, y + 3); y += lines.length * 4.5 + 2
+    }
+    y += 8
+  }
+  doc.save(`escala-${opts.month}.pdf`)
+}
