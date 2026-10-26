@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
-import { Ban, CheckCheck, Copy, Eye, Rocket, Save, Trash2, Undo2 } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Ban, CheckCheck, ChevronDown, Copy, Eye, Rocket, Save, Trash2, Undo2 } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
@@ -9,7 +9,7 @@ import { useMembers, useSchedules } from '../lib/queries'
 import { AlertList, TeamEditor } from '../components/TeamEditor'
 import { SetlistEditor } from '../components/SetlistEditor'
 import { nextWeekday, useAssignments, useEventAlerts, useEventFull, useEventSetlist } from '../lib/events'
-import { EVENT_TYPES, STATUS_LABEL, fmtDateTime, todayStr, nextSunday } from '../lib/utils'
+import { EVENT_TYPES, STATUS_LABEL, addDays, cn, fmtDateTime, parseDate, todayStr, nextSunday } from '../lib/utils'
 import type { EventType } from '../types'
 import { confetti } from '../lib/confetti'
 import { Badge, Button, Card, ConfirmDialog, Field, Input, Modal, PageHeader, PageLoader, SectionTitle, Select, Textarea } from '../components/ui'
@@ -37,6 +37,19 @@ export default function EventEditor() {
     end_time: '', location: '', leader_member_id: '', notes: '', tech_notes: '',
   })
   const [saving, setSaving] = useState(false)
+  const [more, setMore] = useState(false)
+  const taken = useQuery({
+    queryKey: ['events-taken'], enabled: isNew,
+    queryFn: async () => unwrap(await supabase.from('events').select('event_date, event_type').gte('event_date', todayStr()).neq('status', 'cancelled')) as { event_date: string; event_type: string }[],
+  })
+  // datas prontas: próximos 6 domingos 18h e quintas 19h30 (ou os horários cadastrados)
+  const quick = useMemo(() => {
+    const base = (schedules.data ?? []).filter((x) => x.active && (x.event_type === 'sunday_service' || x.event_type === 'thursday_service'))
+    const rules = base.length ? base.map((x) => ({ weekday: x.weekday, time: x.start_time.slice(0, 5), type: x.event_type, title: x.name?.trim() || EVENT_TYPES[x.event_type].label, location: x.location ?? '' }))
+      : [{ weekday: 0, time: '18:00', type: 'sunday_service' as EventType, title: EVENT_TYPES.sunday_service.label, location: '' }, { weekday: 4, time: '19:30', type: 'thursday_service' as EventType, title: EVENT_TYPES.thursday_service.label, location: '' }]
+    return rules.flatMap((r) => Array.from({ length: 6 }, (_, k) => ({ ...r, date: addDays(nextWeekday(r.weekday), 7 * k) }))).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).slice(0, 10)
+  }, [schedules.data])
+  const pickQuick = (q: (typeof quick)[number]) => setF((p) => ({ ...p, event_date: q.date, start_time: q.time, event_type: q.type, title: q.title, location: p.location || q.location }))
   const [publishOpen, setPublishOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
@@ -46,6 +59,7 @@ export default function EventEditor() {
 
   useEffect(() => {
     const e = ev.data
+    if (e) setMore(!!(e.location || e.notes || e.tech_notes || e.end_time))
     if (e) setF({
       title: e.title, event_type: e.event_type, event_date: e.event_date, start_time: e.start_time.slice(0, 5), end_time: e.end_time?.slice(0, 5) ?? '',
       location: e.location ?? '', leader_member_id: e.leader_member_id ?? '', notes: e.notes ?? '', tech_notes: e.tech_notes ?? '',
@@ -58,11 +72,6 @@ export default function EventEditor() {
     title: !p.title || Object.values(EVENT_TYPES).some((x) => x.label === p.title) ? EVENT_TYPES[t].label : p.title,
     start_time: isNew ? DEFAULT_TIMES[t] : p.start_time,
   }))
-  const fromSchedule = (sid: string) => {
-    const s = schedules.data?.find((x) => x.id === sid)
-    if (!s) return
-    setF((p) => ({ ...p, title: s.name, event_type: s.event_type, start_time: s.start_time.slice(0, 5), end_time: s.end_time?.slice(0, 5) ?? '', location: s.location ?? p.location, event_date: nextWeekday(s.weekday) }))
-  }
 
   if (!isLeader) return <Navigate to={id ? `/escalas/${id}` : '/escalas'} replace />
   if (!isNew && (ev.isLoading || assignments.isLoading || setlist.isLoading)) return <PageLoader />
@@ -128,24 +137,42 @@ export default function EventEditor() {
         <div className="space-y-6">
           <Card className="p-5">
             <SectionTitle title="1. Dados do culto" />
+            {isNew && (
+              <div className="mb-4">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Escolha a data</p>
+                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
+                  {quick.map((q) => {
+                    const on = f.event_date === q.date && f.start_time === q.time
+                    const has = (taken.data ?? []).some((t) => t.event_date === q.date && t.event_type === q.type)
+                    const d = parseDate(q.date)
+                    return (
+                      <button key={`${q.date}-${q.time}`} type="button" onClick={() => pickQuick(q)}
+                        className={cn('press shrink-0 rounded-xl border px-3.5 py-2 text-left transition', on ? 'border-accent bg-accent/15' : 'border-border hover:bg-surface2')}>
+                        <span className="block text-[11px] font-bold uppercase text-muted">{new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(d).replace('.', '')} · {q.time.replace(':', 'h').replace('h00', 'h')}</span>
+                        <span className="block text-base font-extrabold">{new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(d).replace('.', '')}</span>
+                        {has && <span className="block text-[10px] font-semibold text-ok">já tem escala</span>}
+                      </button>)
+                  })}
+                </div>
+              </div>)}
             <div className="grid gap-4 sm:grid-cols-2">
-              {isNew && (schedules.data?.length ?? 0) > 0 && (
-                <Field label="Usar horário cadastrado" className="sm:col-span-2"><Select value="" onChange={(ev2) => fromSchedule(ev2.target.value)}><option value="">Escolher culto recorrente…</option>
-                  {schedules.data!.filter((s) => s.active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></Field>)}
-              <Field label="Tipo de evento"><Select value={f.event_type} onChange={(x) => onType(x.target.value as EventType)}>{Object.entries(EVENT_TYPES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</Select></Field>
-              <Field label="Nome do culto ou evento *"><Input value={f.title} onChange={(x) => set('title', x.target.value)} /></Field>
               <Field label="Data *"><Input type="date" value={f.event_date} onChange={(x) => set('event_date', x.target.value)} /></Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Início *"><Input type="time" value={f.start_time} onChange={(x) => set('start_time', x.target.value)} /></Field>
-                <Field label="Término"><Input type="time" value={f.end_time} onChange={(x) => set('end_time', x.target.value)} /></Field>
-              </div>
-              <Field label="Local"><Input value={f.location} onChange={(x) => set('location', x.target.value)} placeholder="Ex.: Templo principal" /></Field>
-              <Field label="Líder responsável"><Select value={f.leader_member_id} onChange={(x) => set('leader_member_id', x.target.value)}><option value="">Selecionar…</option>
+              <Field label="Início *"><Input type="time" value={f.start_time} onChange={(x) => set('start_time', x.target.value)} /></Field>
+              <Field label="Ministro responsável" className="sm:col-span-2" hint="Quem for escolhido aqui monta o repertório e cria a playlist desta escala."><Select value={f.leader_member_id} onChange={(x) => set('leader_member_id', x.target.value)}><option value="">Selecionar…</option>
                 {(members.data ?? []).filter((m) => m.active).map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}</Select></Field>
-              <Field label="Observações gerais" className="sm:col-span-2"><Textarea value={f.notes} onChange={(x) => set('notes', x.target.value)} placeholder="Avisos para a equipe: chegada, roupa, ensaio antes do culto…" /></Field>
-              <Field label="Informações técnicas (para o técnico de som)" className="sm:col-span-2" hint="Microfones, instrumentos, entradas, transições e necessidades especiais. O técnico também pode complementar.">
-                <Textarea value={f.tech_notes} onChange={(x) => set('tech_notes', x.target.value)} /></Field>
             </div>
+            <button type="button" onClick={() => setMore((v) => !v)} className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-accenttext">
+              <ChevronDown className={cn('h-4 w-4 transition', more && 'rotate-180')} />{more ? 'Menos opções' : 'Mais opções (nome, tipo, local, observações…)'}
+            </button>
+            {more && (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <Field label="Tipo de evento"><Select value={f.event_type} onChange={(x) => onType(x.target.value as EventType)}>{Object.entries(EVENT_TYPES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</Select></Field>
+                <Field label="Nome do culto ou evento *"><Input value={f.title} onChange={(x) => set('title', x.target.value)} /></Field>
+                <Field label="Término"><Input type="time" value={f.end_time} onChange={(x) => set('end_time', x.target.value)} /></Field>
+                <Field label="Local"><Input value={f.location} onChange={(x) => set('location', x.target.value)} placeholder="Ex.: Templo principal" /></Field>
+                <Field label="Observações gerais" className="sm:col-span-2"><Textarea value={f.notes} onChange={(x) => set('notes', x.target.value)} placeholder="Avisos para a equipe: chegada, roupa, ensaio antes do culto…" /></Field>
+                <Field label="Informações técnicas (para o técnico de som)" className="sm:col-span-2"><Textarea value={f.tech_notes} onChange={(x) => set('tech_notes', x.target.value)} /></Field>
+              </div>)}
             <div className="mt-5 flex justify-end"><Button variant="primary" loading={saving} onClick={() => void save()}><Save className="h-4 w-4" />{isNew ? 'Criar escala e continuar' : 'Salvar dados'}</Button></div>
           </Card>
 
