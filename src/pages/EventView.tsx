@@ -137,8 +137,8 @@ export default function EventView() {
 
         <Card className="p-5">
           <SectionTitle title="Repertório" subtitle={resolved.length ? `${resolved.filter((r) => r.kind === 'song').length} músicas · ${fmtTotal(tot.total)} · ${resolved.filter((r) => r.kind === 'song' && r.rehearsed).length} ensaiadas` : undefined} />
-          {isEventLead && !isLeader && sl.data ? (<>
-            <p className="mb-3 rounded-xl bg-accent/10 px-3 py-2 text-sm">Você é o ministro responsável por esta escala: monte o repertório, ajuste os tons e crie a playlist.</p>
+          {(isEventLead || isLeader) && e.status !== 'cancelled' && sl.data ? (<>
+            {!isLeader && <p className="mb-3 rounded-xl bg-accent/10 px-3 py-2 text-sm">Você é o ministro responsável por esta escala: monte o repertório, ajuste os tons e crie a playlist.</p>}
             <SetlistEditor setlist={sl.data} eventType={e.event_type} />
           </>) : resolved.length === 0 ? <EmptyState title="Repertório ainda não definido" /> : (
             <ol className="space-y-2">
