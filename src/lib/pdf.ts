@@ -31,7 +31,7 @@ function setlistTable(doc: jsPDF, items: ResolvedItem[], startY: number) {
     margin: { left: 14, right: 14 },
   })
   const t = totalSeconds(items)
-  const y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 7
+  const y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...DARK)
   doc.text(`Duração total: ${fmtTotal(t.total)}${t.unknown ? ` (+ ${t.unknown} música(s) sem duração)` : ''}`, 14, y)
   // observações das músicas
@@ -53,7 +53,7 @@ export function exportSetlistPdf(opts: { church: string; title: string; subtitle
 
 export function exportEventPdf(opts: {
   church: string; title: string; subtitle: string; leader?: string | null; location?: string | null
-  team: { role: string; name: string; status: string }[]; items: ResolvedItem[]; notes?: string | null; techNotes?: string | null
+  team: { role: string; name: string }[]; items: ResolvedItem[]; notes?: string | null; techNotes?: string | null
 }) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   header(doc, opts.church, opts.title, opts.subtitle)
@@ -61,20 +61,29 @@ export function exportEventPdf(opts: {
   doc.setFontSize(10); doc.setTextColor(60, 60, 60)
   if (opts.leader) { doc.text(`Líder responsável: ${opts.leader}`, 14, y); y += 5 }
   if (opts.location) { doc.text(`Local: ${opts.location}`, 14, y); y += 5 }
+  // equipe agrupada por função (mesma ordem da escala)
+  const groups: { role: string; names: string[] }[] = []
+  for (const t of opts.team) {
+    const g = groups.find((x) => x.role === t.role)
+    if (g) g.names.push(t.name); else groups.push({ role: t.role, names: [t.name] })
+  }
   autoTable(doc, {
-    startY: y + 2, head: [['Função', 'Integrante', 'Situação']], body: opts.team.map((t) => [t.role, t.name, t.status]),
+    startY: y + 2, head: [['Função', 'Integrantes']], body: groups.length ? groups.map((g) => [g.role, g.names.join(', ')]) : [['', 'Equipe ainda não definida']],
     headStyles: { fillColor: DARK, textColor: [255, 255, 255] }, alternateRowStyles: { fillColor: [247, 247, 244] },
-    styles: { fontSize: 10 }, margin: { left: 14, right: 14 },
+    styles: { fontSize: 10, cellPadding: 2.6 }, columnStyles: { 0: { cellWidth: 42, fontStyle: 'bold' } }, margin: { left: 14, right: 14 },
   })
-  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...DARK); doc.text('Repertório', 14, y)
-  setlistTable(doc, opts.items, y + 3)
+  let last = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY
+  if (opts.items.length > 0) {
+    y = last + 8
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...DARK); doc.text('Repertório', 14, y)
+    setlistTable(doc, opts.items, y + 3)
+    last = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY
+  }
   const extra: string[][] = []
   if (opts.notes) extra.push(['Observações gerais', opts.notes])
   if (opts.techNotes) extra.push(['Informações técnicas', opts.techNotes])
   if (extra.length) {
-    const fy = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6
-    autoTable(doc, { startY: fy, body: extra, theme: 'grid', styles: { fontSize: 9 }, columnStyles: { 0: { cellWidth: 38, fontStyle: 'bold' } }, margin: { left: 14, right: 14 } })
+    autoTable(doc, { startY: last + 8, body: extra, theme: 'grid', styles: { fontSize: 9 }, columnStyles: { 0: { cellWidth: 38, fontStyle: 'bold' } }, margin: { left: 14, right: 14 } })
   }
   doc.save(`${opts.title.replace(/[^\w\- ]+/g, '').trim() || 'escala'}.pdf`)
 }

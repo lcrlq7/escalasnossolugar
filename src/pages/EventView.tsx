@@ -68,7 +68,7 @@ export default function EventView() {
   const pdf = () => exportEventPdf({
     church: church?.name ?? '', title: e.title, subtitle: `${fmtDateLong(e.event_date)} · ${fmtTime(e.start_time)}${e.end_time ? ` – ${fmtTime(e.end_time)}` : ''} · ${STATUS_LABEL[e.status]}`,
     leader: e.leader?.full_name, location: e.location, notes: e.notes, techNotes: e.tech_notes,
-    team: team.map((t) => ({ role: t.function?.name ?? '', name: t.member?.full_name ?? '', status: '' })), items: resolved,
+    team: team.map((t) => ({ role: t.function?.name ?? '', name: t.member?.full_name ?? '' })), items: resolved,
   })
 
   return (

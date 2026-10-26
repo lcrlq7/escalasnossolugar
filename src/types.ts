@@ -10,7 +10,7 @@ export interface Profile {
 }
 export interface WFunction {
   id: string; church_id: string; name: string; is_required: boolean; is_main: boolean
-  is_instrument: boolean; sort_order: number; active: boolean
+  is_instrument: boolean; sort_order: number; active: boolean; slots: number
 }
 export interface Member {
   id: string; church_id: string; profile_id: string | null; full_name: string; phone: string | null

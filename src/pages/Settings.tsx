@@ -184,11 +184,12 @@ function FunctionsTab() {
   const q = useFunctions()
   if (q.isLoading) return <PageLoader />
   return <SimpleCrud<WFunction> title="Funções do ministério" items={q.data ?? []} table="worship_functions"
-    blank={{ name: '', is_required: false, is_main: false, is_instrument: false, sort_order: (q.data?.length ?? 0) + 1, active: true }}
-    render={(i) => <div className="flex flex-wrap items-center gap-2"><span className="font-semibold">{i.name}</span>{i.is_required && <Badge tone="accent">Obrigatória</Badge>}{i.is_main && <Badge>Principal</Badge>}{i.is_instrument && <Badge>Instrumento</Badge>}{!i.active && <Badge tone="warn">Inativa</Badge>}</div>}
+    blank={{ name: '', is_required: false, is_main: false, is_instrument: false, slots: 1, sort_order: (q.data?.length ?? 0) + 1, active: true }}
+    render={(i) => <div className="flex flex-wrap items-center gap-2"><span className="font-semibold">{i.name}</span>{i.is_required && <Badge tone="accent">Obrigatória</Badge>}{i.is_main && <Badge>Principal</Badge>}{i.is_instrument && <Badge>Instrumento</Badge>}{i.slots > 1 && <Badge>{i.slots} vagas</Badge>}{!i.active && <Badge tone="warn">Inativa</Badge>}</div>}
     fields={(f, set) => (<>
       <Field label="Nome"><Input value={String(f.name ?? '')} onChange={(e) => set('name', e.target.value)} /></Field>
       <Field label="Ordem"><Input type="number" value={Number(f.sort_order ?? 0)} onChange={(e) => set('sort_order', Number(e.target.value))} /></Field>
+      <Field label="Vagas por culto" hint="Quantas pessoas nessa função em cada escala (ex.: Vocal = 3)."><Input type="number" min={1} max={12} value={Number(f.slots ?? 1)} onChange={(e) => set('slots', Math.max(1, Math.min(12, Number(e.target.value) || 1)))} /></Field>
       <Toggle label="Obrigatória em todo culto" checked={!!f.is_required} onChange={(v) => set('is_required', v)} />
       <Toggle label="Função principal (ex.: ministro)" checked={!!f.is_main} onChange={(v) => set('is_main', v)} />
       <Toggle label="Instrumento" checked={!!f.is_instrument} onChange={(v) => set('is_instrument', v)} />

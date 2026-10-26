@@ -54,7 +54,7 @@ export function TeamEditor({ event, assignments }: { event: EventRow; assignment
   const remove = async (id: string) => {
     try { unwrap(await supabase.from('event_assignments').delete().eq('id', id).select()); refresh() } catch (e) { toast.error(e) }
   }
-  const [sug, setSug] = useState<{ function_id: string; function_name: string; member_id: string; member_name: string; reason: string }[] | null>(null)
+  const [sug, setSug] = useState<{ slot_key: string; function_id: string; function_name: string; member_id: string; member_name: string; reason: string }[] | null>(null)
   const [pick, setPick] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const suggest = async () => {
@@ -62,11 +62,11 @@ export function TeamEditor({ event, assignments }: { event: EventRow; assignment
     try {
       const r = (unwrap(await supabase.rpc('suggest_team', { p_event: event.id })) ?? []) as unknown as NonNullable<typeof sug>
       if (r.length === 0) toast.info('Nenhuma sugestão: todas as funções já têm alguém, ou não há integrantes disponíveis habilitados.')
-      else { setSug(r); setPick(new Set(r.map((x) => x.function_id))) }
+      else { setSug(r); setPick(new Set(r.map((x) => x.slot_key))) }
     } catch (e) { toast.error(e) } finally { setBusy(false) }
   }
   const apply = async () => {
-    const rows = (sug ?? []).filter((x) => pick.has(x.function_id)).map((x) => ({ event_id: event.id, member_id: x.member_id, function_id: x.function_id }))
+    const rows = (sug ?? []).filter((x) => pick.has(x.slot_key)).map((x) => ({ event_id: event.id, member_id: x.member_id, function_id: x.function_id }))
     if (!rows.length) { setSug(null); return }
     setBusy(true)
     try { unwrap(await supabase.from('event_assignments').insert(rows).select()); toast.success(`${rows.length} integrante(s) adicionados.`); setSug(null); refresh() }
@@ -82,8 +82,8 @@ export function TeamEditor({ event, assignments }: { event: EventRow; assignment
         footer={<><Button variant="ghost" onClick={() => setSug(null)}>Cancelar</Button><Button variant="primary" loading={busy} onClick={() => void apply()}>Adicionar selecionados</Button></>}>
         <p className="mb-3 text-sm text-muted">Montada pelo rodízio: quem serviu menos nos últimos 30 dias e há mais tempo sem servir, só entre quem está habilitado na função, disponível e sem conflito de horário.</p>
         <ul className="space-y-2">{(sug ?? []).map((x) => (
-          <li key={x.function_id}><label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-3">
-            <input type="checkbox" className="mt-1 h-4 w-4 accent-[rgb(var(--accent))]" checked={pick.has(x.function_id)} onChange={() => setPick((p) => { const n = new Set(p); if (n.has(x.function_id)) n.delete(x.function_id); else n.add(x.function_id); return n })} />
+          <li key={x.slot_key}><label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-3">
+            <input type="checkbox" className="mt-1 h-4 w-4 accent-[rgb(var(--accent))]" checked={pick.has(x.slot_key)} onChange={() => setPick((p) => { const n = new Set(p); if (n.has(x.slot_key)) n.delete(x.slot_key); else n.add(x.slot_key); return n })} />
             <span className="text-sm"><b>{x.function_name}:</b> {x.member_name}<span className="block text-xs text-muted">{x.reason}</span></span></label></li>))}</ul>
       </Modal>
       {list.map((f) => {
@@ -98,6 +98,7 @@ export function TeamEditor({ event, assignments }: { event: EventRow; assignment
               <span className="text-sm font-bold">{f.name}</span>
               {f.is_main && <Badge tone="accent">Principal</Badge>}
               {f.is_required && <Badge tone="warn">Obrigatória</Badge>}
+              {f.slots > 1 && <Badge tone={here.length >= f.slots ? 'ok' : 'neutral'}>{here.length}/{f.slots}</Badge>}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {here.map((a) => (
