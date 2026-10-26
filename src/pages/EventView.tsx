@@ -47,7 +47,8 @@ export default function EventView() {
   const mine = team.filter((a) => a.member_id === member?.id)
   const peopleIds = new Set(team.map((a) => a.member_id))
   const tot = totalSeconds(resolved)
-  const isEventLead = !!member?.id && member.id === e.leader_member_id && e.status !== 'cancelled'
+  // ministro da escala: o líder responsável ou quem está na função principal (Ministro principal)
+  const isEventLead = !!member?.id && e.status !== 'cancelled' && (member.id === e.leader_member_id || team.some((a) => a.member_id === member.id && a.function?.is_main))
   const canTech = isLeader || (isTech && e.status !== 'draft')
   const canRespond = mine.length > 0 && e.status === 'published'
 

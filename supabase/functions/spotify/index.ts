@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
   }
 
   if (body.action === 'connect') {
-    // líderes/admins, ou o ministro responsável por alguma escala ativa, criam playlists
+    // líderes/admins, ou o ministro (responsável ou principal) de alguma escala ativa, criam playlists
     const { data: ok } = await admin.from('user_roles').select('role').eq('user_id', uid).in('role', ['admin', 'leader']).limit(1)
     let allowed = !!ok?.length
     if (!allowed) {
@@ -79,6 +79,11 @@ Deno.serve(async (req) => {
       if (m) {
         const { data: ev } = await admin.from('events').select('id').eq('leader_member_id', m.id).neq('status', 'cancelled').limit(1)
         allowed = !!ev?.length
+        if (!allowed) {
+          const { data: asg } = await admin.from('event_assignments').select('id, worship_functions!inner(is_main), events!inner(status)')
+            .eq('member_id', m.id).eq('worship_functions.is_main', true).neq('events.status', 'cancelled').limit(1)
+          allowed = !!asg?.length
+        }
       }
     }
     if (!allowed) return json({ error: 'Apenas líderes, administradores e ministros responsáveis por uma escala podem conectar o Spotify.' }, 403)
