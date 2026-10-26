@@ -133,46 +133,73 @@ export interface MonthEvent {
 
 const WD = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
-/** PDF com todas as escalas do mês: um bloco por culto (data, ministro, equipe por função e repertório). */
+const WD_FULL = ['DOMINGO', 'SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO']
+
+/** PDF do mês em grade (como a planilha): uma tabela por dia da semana, datas nas colunas e funções nas linhas. */
 export function exportMonthPdf(opts: { church: string; monthLabel: string; month: string; events: MonthEvent[] }) {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-  header(doc, opts.church, `Escala de ${opts.monthLabel}`, `${opts.events.length} ${opts.events.length === 1 ? 'culto' : 'cultos'}`)
-  let y = 46
-  const ensure = (h: number) => { if (y + h > 280) { doc.addPage(); y = 16 } }
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
+  const W = 297, M = 12
+  const frame = (first: boolean) => {
+    doc.setFillColor(...DARK); doc.rect(0, 0, W, first ? 20 : 12, 'F'); doc.setFillColor(...GOLD); doc.rect(0, first ? 20 : 12, W, 1.2, 'F')
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(first ? 15 : 10)
+    doc.text(`ESCALA ${opts.monthLabel.toUpperCase()}`, M, first ? 13 : 8)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(210, 210, 210)
+    doc.text(opts.church, W - M, first ? 13 : 8, { align: 'right' })
+  }
+  frame(true)
+  let y = 30
+  const last = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY
   if (opts.events.length === 0) {
     doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(90, 90, 90)
-    doc.text('Nenhuma escala neste mês.', 14, y)
+    doc.text('Nenhuma escala neste mês.', M, y)
   }
-  for (const e of opts.events) {
-    const d = new Date(`${e.event_date}T12:00:00`)
-    const when = `${WD[d.getDay()]}, ${e.event_date.slice(8, 10)}/${e.event_date.slice(5, 7)} · ${e.start_time.slice(0, 5)}${e.end_time ? ` – ${e.end_time.slice(0, 5)}` : ''}`
-    const groups: { role: string; names: string[] }[] = []
-    for (const t of [...e.team].sort((a, b) => a.order - b.order)) {
-      const g = groups.find((x) => x.role === t.role)
-      if (g) g.names.push(t.name); else groups.push({ role: t.role, names: [t.name] })
+  // agrupa por dia da semana (domingo por último)
+  const byDay = new Map<number, MonthEvent[]>()
+  for (const e of opts.events) { const wd = new Date(`${e.event_date}T12:00:00`).getDay(); byDay.set(wd, [...(byDay.get(wd) ?? []), e]) }
+  const days = [...byDay.entries()].sort((a, b) => ((a[0] + 6) % 7) - ((b[0] + 6) % 7))
+  for (const [wd, evs] of days) {
+    evs.sort((a, b) => a.event_date.localeCompare(b.event_date) || a.start_time.localeCompare(b.start_time))
+    // linhas = funções; funções com várias pessoas viram "Função 1, 2, 3"
+    const roles = new Map<string, { order: number; max: number }>()
+    for (const e of evs) {
+      const cnt = new Map<string, number>()
+      for (const t of e.team) {
+        cnt.set(t.role, (cnt.get(t.role) ?? 0) + 1)
+        const r = roles.get(t.role) ?? { order: t.order, max: 0 }
+        r.order = Math.min(r.order, t.order); r.max = Math.max(r.max, cnt.get(t.role)!); roles.set(t.role, r)
+      }
     }
-    ensure(30 + groups.length * 7)
-    doc.setFillColor(...GOLD); doc.rect(14, y, 1.6, 9, 'F')
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...DARK)
-    doc.text(`${when}  ·  ${e.title}`, 18, y + 4)
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90, 90, 90)
-    const meta = [e.leader ? `Ministro: ${e.leader}` : null, e.location, e.status === 'draft' ? 'Rascunho' : null].filter(Boolean).join('  ·  ')
-    if (meta) doc.text(meta, 18, y + 8.5)
-    y += 12
+    const rows: { label: string; role: string; idx: number }[] = []
+    for (const [role, r] of [...roles.entries()].sort((a, b) => a[1].order - b[1].order))
+      for (let i = 0; i < r.max; i++) rows.push({ label: r.max > 1 ? `${role} ${i + 1}` : role, role, idx: i })
+    const people = (e: MonthEvent, role: string) => e.team.filter((t) => t.role === role).sort((a, b) => a.order - b.order)
+    const body = rows.map((r) => [r.label, ...evs.map((e) => people(e, r.role)[r.idx]?.name ?? '')])
+    const need = 14 + (body.length + 2) * 6.2
+    if (y + need > 205) { doc.addPage(); frame(false); y = 20 }
+    const cw = Math.min(46, (W - 2 * M - 34) / evs.length)
     autoTable(doc, {
-      startY: y, head: [['Função', 'Integrantes']], body: groups.length ? groups.map((g) => [g.role, g.names.join(', ')]) : [['', 'Equipe ainda não definida']],
-      headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontSize: 8.5 }, alternateRowStyles: { fillColor: [247, 247, 244] },
-      styles: { fontSize: 9, cellPadding: 1.8 }, columnStyles: { 0: { cellWidth: 38, fontStyle: 'bold' } }, margin: { left: 14, right: 14 },
+      startY: y, margin: { left: M, right: M }, theme: 'grid', tableWidth: 34 + cw * evs.length,
+      head: [[{ content: WD_FULL[wd], styles: { halign: 'left' } }, ...evs.map((e) => `${e.event_date.slice(8, 10)}/${e.event_date.slice(5, 7)}/${e.event_date.slice(0, 4)}`)],
+        ['Ministro', ...evs.map((e) => e.leader ?? '—')]],
+      body,
+      styles: { fontSize: 9.5, cellPadding: 1.6, lineColor: [40, 40, 40], lineWidth: 0.25, textColor: DARK, halign: 'center', valign: 'middle' },
+      headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: 'bold' },
+      columnStyles: { 0: { cellWidth: 34, halign: 'left', fontStyle: 'bold', fillColor: [250, 243, 205] } },
+      didParseCell: (d) => { if (d.section === 'head' && d.row.index === 1) { d.cell.styles.fillColor = [250, 243, 205]; d.cell.styles.textColor = DARK; d.cell.styles.fontSize = 8.5 } },
     })
-    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3
-    if (e.songs.length) {
-      const line = `Repertório: ${e.songs.map((s) => (s.key ? `${s.title} (${s.key})` : s.title)).join('  ·  ')}`
-      const lines = doc.splitTextToSize(line, 182) as string[]
-      ensure(lines.length * 4.5 + 4)
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(60, 60, 60)
-      doc.text(lines, 14, y + 3); y += lines.length * 4.5 + 2
-    }
-    y += 8
+    y = last() + 10
+  }
+  // repertórios do mês
+  const withSongs = opts.events.filter((e) => e.songs.length)
+  if (withSongs.length) {
+    doc.addPage(); frame(false)
+    autoTable(doc, {
+      startY: 20, margin: { left: M, right: M }, theme: 'grid',
+      head: [['Data', 'Culto', 'Repertório']],
+      body: withSongs.map((e) => [`${WD[new Date(`${e.event_date}T12:00:00`).getDay()]} ${e.event_date.slice(8, 10)}/${e.event_date.slice(5, 7)}`, e.title, e.songs.map((s, i) => `${i + 1}. ${s.title}${s.key ? ` (${s.key})` : ''}`).join('\n')]),
+      styles: { fontSize: 9, cellPadding: 2, lineColor: [200, 200, 200], lineWidth: 0.2, textColor: DARK, valign: 'top' },
+      headStyles: { fillColor: DARK, textColor: [255, 255, 255] }, columnStyles: { 0: { cellWidth: 26, fontStyle: 'bold' }, 1: { cellWidth: 60 } },
+    })
   }
   doc.save(`escala-${opts.month}.pdf`)
 }
