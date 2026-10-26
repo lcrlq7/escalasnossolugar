@@ -17,8 +17,13 @@ interface Ev { id: string; title: string; event_date: string; status: string; ev
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v)
 
 export default function Reports() {
-  const [from, setFrom] = useState(addDays(todayStr(), -90))
-  const [to, setTo] = useState(todayStr())
+  const monthRange = (offset: number) => {
+    const t = new Date(); const a = new Date(t.getFullYear(), t.getMonth() + offset, 1); const b = new Date(a.getFullYear(), a.getMonth() + 1, 0)
+    const f = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return [f(a), f(b)] as const
+  }
+  const [from, setFrom] = useState(monthRange(0)[0])
+  const [to, setTo] = useState(monthRange(0)[1])
   const songs = useSongs()
   const usage = useSongUsage(from, to)
   const evs = useQuery({
@@ -63,8 +68,18 @@ export default function Reports() {
       <Card className="flex flex-wrap items-end gap-4 p-4">
         <Field label="De"><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
         <Field label="Até"><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
-        <div className="flex gap-2 pb-0.5">{[['30 dias', 30], ['90 dias', 90], ['1 ano', 365]].map(([l, n]) => <button key={l as string} onClick={() => { setFrom(addDays(todayStr(), -(n as number))); setTo(todayStr()) }} className="rounded-lg bg-surface2 px-3 py-2 text-xs font-semibold hover:bg-border">{l}</button>)}</div>
+        <div className="flex flex-wrap gap-2 pb-0.5">{[['Este mês', 'm0'], ['Próximo mês', 'm1'], ['Mês passado', 'm-1'], ['90 dias', 90], ['1 ano', 365]].map(([l, n]) => <button key={l as string} onClick={() => { if (typeof n === 'string') { const r = monthRange(Number(n.slice(1))); setFrom(r[0]); setTo(r[1]) } else { setFrom(addDays(todayStr(), -n)); setTo(todayStr()) } }} className="rounded-lg bg-surface2 px-3 py-2 text-xs font-semibold hover:bg-border">{l}</button>)}</div>
       </Card>
+      <Card className="overflow-x-auto p-5"><SectionTitle title="Quantas vezes cada pessoa está escalada" subtitle="Conta cultos no período escolhido (publicados e concluídos). Laranja = muito escalado(a) recentemente." />
+        {(att.data ?? []).length === 0 ? <p className="text-sm text-muted">Sem integrantes ativos.</p> : (
+          <table className="w-full min-w-[32rem] text-sm"><thead><tr className="border-b border-border text-left text-xs uppercase text-muted"><th className="py-2">Integrante</th><th>Escalas no período</th><th>Últimos 30 dias</th><th>Última vez</th><th>Situação</th></tr></thead>
+            <tbody>{att.data!.map((m) => {
+              const days = m.last_served ? Math.floor((Date.now() - new Date(`${m.last_served}T12:00:00`).getTime()) / 86400000) : null
+              return (<tr key={m.member_id} className="border-b border-border/60 last:border-0"><td className="py-2 font-semibold">{m.full_name}</td><td className="pr-4"><div className="flex items-center gap-2"><span className="w-5 font-bold">{m.total}</span><div className="h-1.5 w-24 overflow-hidden rounded-full bg-surface2"><div className="h-full rounded-full bg-accent" style={{ width: `${(m.total / Math.max(1, ...(att.data ?? []).map((x) => x.total))) * 100}%` }} /></div></div></td><td>{m.last_30}</td>
+                <td>{m.last_served ? fmtDate(m.last_served) : '—'}</td>
+                <td>{m.last_30 >= 4 ? <Badge tone="warn">Sobrecarregado(a)</Badge> : days === null || days > 45 ? <Badge tone="info">Descansado(a)</Badge> : <Badge tone="ok">Em dia</Badge>}</td></tr>)
+            })}</tbody></table>)}</Card>
+
       {loading ? <PageLoader /> : (evs.data ?? []).length === 0 ? <EmptyState title="Sem dados neste período" text="Os relatórios consideram escalas publicadas ou concluídas. Ajuste o período ou publique escalas." /> : (<>
         <div className="grid gap-4 sm:grid-cols-3">
           {[['Cultos no período', evs.data!.length], ['Participações', d.total], ['Integrantes escalados', d.members.length]].map(([l, v]) => (
@@ -94,16 +109,6 @@ export default function Reports() {
               <li key={u.event_id} className="flex justify-between gap-3"><Link to={`/escalas/${u.event_id}`} className="truncate font-semibold hover:underline">{u.event_title}</Link><span className="shrink-0 text-muted">{fmtDate(u.date)} · {(usage.data ?? []).filter((x) => x.event_id === u.event_id).length} músicas</span></li>))}</ul></Card>
         </div>
       </>)}
-
-      <Card className="overflow-x-auto p-5"><SectionTitle title="Carga e rodízio da equipe" subtitle="Quem está sobrecarregado e quem está há mais tempo sem servir" />
-        {(att.data ?? []).length === 0 ? <p className="text-sm text-muted">Sem integrantes ativos.</p> : (
-          <table className="w-full min-w-[32rem] text-sm"><thead><tr className="border-b border-border text-left text-xs uppercase text-muted"><th className="py-2">Integrante</th><th>No período</th><th>Últimos 30 dias</th><th>Última vez</th><th>Situação</th></tr></thead>
-            <tbody>{att.data!.map((m) => {
-              const days = m.last_served ? Math.floor((Date.now() - new Date(`${m.last_served}T12:00:00`).getTime()) / 86400000) : null
-              return (<tr key={m.member_id} className="border-b border-border/60 last:border-0"><td className="py-2 font-semibold">{m.full_name}</td><td className="pr-4"><div className="flex items-center gap-2"><span className="w-5 font-bold">{m.total}</span><div className="h-1.5 w-24 overflow-hidden rounded-full bg-surface2"><div className="h-full rounded-full bg-accent" style={{ width: `${(m.total / Math.max(1, ...(att.data ?? []).map((x) => x.total))) * 100}%` }} /></div></div></td><td>{m.last_30}</td>
-                <td>{m.last_served ? fmtDate(m.last_served) : '—'}</td>
-                <td>{m.last_30 >= 4 ? <Badge tone="warn">Sobrecarregado(a)</Badge> : days === null || days > 45 ? <Badge tone="info">Descansado(a)</Badge> : <Badge tone="ok">Em dia</Badge>}</td></tr>)
-            })}</tbody></table>)}</Card>
 
       <Card className="p-5"><SectionTitle title="Escalas com pendências" subtitle="Próximos 60 dias" />
         {(pend.data ?? []).length === 0 ? <p className="text-sm text-ok">Nenhuma pendência encontrada.</p> : (
