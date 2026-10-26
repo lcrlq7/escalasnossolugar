@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, ExternalLink, Search, Youtube, Music2, Check } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
@@ -15,10 +15,18 @@ interface Initial {
   youtube_url?: string; spotify_url?: string; source?: string
 }
 
+/** Líder/admin ou ministro responsável por alguma escala (pode cadastrar músicas novas). */
+function useCanAddSongs() {
+  const { session, isLeader } = useAuth()
+  const q = useQuery({ queryKey: ['can-plan', session?.user.id], enabled: !!session && !isLeader, queryFn: async () => unwrap(await supabase.rpc('can_plan_playlists')) as boolean })
+  return isLeader || q.data === true
+}
+
 /** Formulário de revisão/edição de música. */
 export function SongFormModal({ open, song, initial, onClose, onSaved }:
   { open: boolean; song?: Song | null; initial?: Initial; onClose: () => void; onSaved?: (s: Song) => void }) {
   const { church, isLeader } = useAuth()
+  const canAdd = useCanAddSongs()
   const toast = useToast()
   const qc = useQueryClient()
   const [f, setF] = useState({
@@ -92,7 +100,7 @@ export function SongFormModal({ open, song, initial, onClose, onSaved }:
   return (
     <Modal open={open} onClose={onClose} size="lg" title={song ? 'Editar música' : 'Revisar e cadastrar música'}
       footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button>
-        {isLeader && <Button variant="primary" loading={saving} onClick={save}>{song ? 'Salvar alterações' : 'Adicionar à biblioteca'}</Button>}</>}>
+        {(song ? isLeader : canAdd) && <Button variant="primary" loading={saving} onClick={save}>{song ? 'Salvar alterações' : 'Adicionar à biblioteca'}</Button>}</>}>
       <div className="space-y-4">
         {similar.length > 0 && (
           <div className="rounded-xl border border-warn/40 bg-warn/10 p-3 text-sm">
@@ -257,11 +265,17 @@ export function SongPickerModal({ open, onClose, onPick, excludeIds = [] }:
   return (
     <>
       <Modal open={open && !adding} onClose={onClose} size="lg" title="Adicionar música ao repertório"
-        footer={<Button variant="outline" onClick={() => setAdding(true)}>Música nova (pesquisar / cadastrar)</Button>}>
+        footer={<Button variant="outline" onClick={() => setAdding(true)}><Search className="h-4 w-4" />Pesquisar música nova na internet</Button>}>
         <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar na biblioteca por título, artista ou tag" />
+        {q.trim().length >= 2 && (
+          <button onClick={() => setAdding(true)} className="mt-2 flex w-full items-center gap-3 rounded-xl border border-dashed border-accent/60 bg-accent/10 p-3 text-left text-sm font-semibold hover:bg-accent/20">
+            <Search className="h-4 w-4 shrink-0 text-accenttext" />
+            <span className="min-w-0 flex-1 truncate">Não achou? Buscar “{q.trim()}” no YouTube, Spotify e catálogo</span>
+            <span className="text-xs font-bold text-accenttext">Buscar e adicionar</span>
+          </button>)}
         <div className="mt-3 space-y-1.5">
           {songs.isLoading && <div className="flex justify-center py-6"><Spinner /></div>}
-          {!songs.isLoading && list.length === 0 && <EmptyState title="Nenhuma música encontrada" text="Cadastre uma música nova para incluí-la no repertório." />}
+          {!songs.isLoading && list.length === 0 && <EmptyState title="Nenhuma música na biblioteca" text="Use o botão acima para buscar na internet: ao salvar, a música já entra neste repertório." />}
           {list.map((s) => {
             const used = excludeIds.includes(s.id)
             return (
