@@ -45,6 +45,12 @@ body {
 * { scrollbar-width: thin; scrollbar-color: rgb(var(--border)) transparent; }
 :focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; }
 input, select, textarea, button { font: inherit; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+button, a, input, select, textarea, label { touch-action: manipulation; }
+/* iOS dá zoom ao focar campos com fonte menor que 16px: no celular todos os campos têm 16px */
+@media (max-width: 767px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea, .field { font-size: 16px !important; }
+}
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
 @layer components {
