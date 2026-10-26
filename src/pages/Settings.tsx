@@ -6,7 +6,7 @@ import { searchMusic } from '../lib/music'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { useCategories, useFunctions, useMembers, useSchedules } from '../lib/queries'
-import { EVENT_TYPES, ROLE_LABEL, WEEKDAYS, fmtTime } from '../lib/utils'
+import { EVENT_TYPES, ROLE_LABEL, WEEKDAYS, fmtTime, normalize } from '../lib/utils'
 import type { EventType, Profile, Role, ServiceSchedule, WFunction, Category } from '../types'
 import { Avatar, Badge, Button, Card, ConfirmDialog, Field, IconButton, Input, Modal, PageHeader, PageLoader, SectionTitle, Select, Tabs, Toggle } from '../components/ui'
 
@@ -66,12 +66,26 @@ function UsersTab() {
     else unwrap(await supabase.from('user_roles').insert({ user_id: u.id, role }).select())
   }, 'Cargos atualizados.')
   const link = (u: UserRow, memberId: string) => run(u.id + 'm', async () => {
+    if (!u.active && memberId !== '__new') unwrap(await supabase.rpc('admin_set_user_active', { p_user: u.id, p_active: true }))
     if (memberId === '__new') unwrap(await supabase.rpc('admin_create_member_for_user', { p_user: u.id }))
     else unwrap(await supabase.rpc('admin_link_member', { p_user: u.id, p_member: memberId }))
-  }, 'Integrante vinculado.')
+  }, 'Integrante vinculado e acesso liberado.')
 
   if (q.isLoading) return <PageLoader />
   const pending = (q.data ?? []).filter((u) => !u.active)
+  const free = (members.data ?? []).filter((m) => !m.profile_id && m.active)
+  const digits = (v?: string | null) => (v ?? '').replace(/\D/g, '').slice(-9)
+  const suggest = (u: UserRow) => {
+    const toks = (t: string) => normalize(t).split(' ').filter((x) => x.length > 1)
+    const ut = toks(u.full_name)
+    return free.map((m) => {
+      const mt = toks(m.full_name)
+      let score = ut.filter((t) => mt.includes(t)).length
+      if (ut[0] && ut[0] === mt[0]) score += 0.5
+      if (digits(u.phone).length >= 8 && digits(u.phone) === digits(m.phone)) score += 5
+      return { m, score }
+    }).filter((x) => x.score >= 1).sort((a, b) => b.score - a.score).slice(0, 3).map((x) => x.m)
+  }
   const linked = (uid: string) => (members.data ?? []).find((m) => m.profile_id === uid)
   const Row = ({ u }: { u: UserRow }) => (
     <Card className="space-y-3 p-4">
@@ -90,14 +104,23 @@ function UsersTab() {
             className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${on ? 'border-accent bg-accent text-accentfg' : 'border-border text-muted hover:bg-surface2'}`}>{ROLE_LABEL[r]}</button>
         })}
       </div>
-      {u.active && (
-        <Field label="Integrante vinculado">
-          <Select value={linked(u.id)?.id ?? ''} disabled={!!linked(u.id) || busy === u.id + 'm'} onChange={(e) => e.target.value && link(u, e.target.value)}>
-            <option value="">{linked(u.id) ? linked(u.id)!.full_name : 'Sem vínculo'}</option>
-            {!linked(u.id) && <option value="__new">Criar integrante com os dados deste usuário</option>}
-            {!linked(u.id) && (members.data ?? []).filter((m) => !m.profile_id).map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
-          </Select>
-        </Field>)}
+      {linked(u.id) ? <p className="text-sm text-muted">Integrante vinculado: <b className="text-fg">{linked(u.id)!.full_name}</b></p> : (
+        <div className="space-y-2">
+          {suggest(u).length > 0 && (
+            <div className="rounded-xl border border-accent/40 bg-accent/10 p-3">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Parece ser</p>
+              <div className="flex flex-wrap gap-2">
+                {suggest(u).map((m) => <Button key={m.id} size="sm" variant="primary" loading={busy === u.id + 'm'} onClick={() => link(u, m.id)}>{m.full_name} · {u.active ? 'vincular' : 'liberar e vincular'}</Button>)}
+              </div>
+            </div>)}
+          <Field label="Vincular a outro integrante">
+            <Select value="" disabled={busy === u.id + 'm'} onChange={(e) => e.target.value && link(u, e.target.value)}>
+              <option value="">Escolher integrante…</option>
+              <option value="__new">Criar integrante com os dados deste usuário</option>
+              {free.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+            </Select>
+          </Field>
+        </div>)}
     </Card>
   )
   return (
