@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Home, CalendarDays, Music2, ListMusic, Users, BarChart3, History, Settings, CalendarCheck, ClipboardList,
+  Home, CalendarDays, Music2, ListMusic, Users, BarChart3, History, Settings, CalendarCheck, ClipboardList, UserCheck,
   Bell, Sun, Moon, LogOut, Menu, X, UserCircle,
 } from 'lucide-react'
 import { useAuth } from '../context/Auth'
@@ -19,6 +19,7 @@ export function useNav(): NavItem[] {
   const { isLeader, isAdmin, member } = useAuth()
   return [
     { to: '/', label: 'Início', icon: Home, show: true, end: true },
+    { to: '/minhas-escalas', label: 'Minhas escalas', icon: UserCheck, show: !!member },
     { to: '/escalas', label: 'Escalas', icon: ClipboardList, show: true },
     { to: '/calendario', label: 'Calendário', icon: CalendarDays, show: true },
     { to: '/musicas', label: 'Músicas', icon: Music2, show: true },
@@ -144,7 +145,7 @@ export function Layout() {
   }, [])
   useEffect(() => setDrawer(false), [loc.pathname])
   useEffect(() => { if (church?.system_name) document.title = church.system_name }, [church?.system_name])
-  const bottom = items.filter((i) => ['/', '/escalas', '/calendario', '/musicas'].includes(i.to))
+  const bottom = items.filter((i) => ['/', '/minhas-escalas', '/escalas', '/calendario', '/musicas'].includes(i.to))
 
   return (
     <div className="relative flex min-h-full">
