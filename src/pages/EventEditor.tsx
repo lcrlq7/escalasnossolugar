@@ -230,7 +230,7 @@ export default function EventEditor() {
       </Modal>
       <Modal open={dupOpen} onClose={() => setDupOpen(false)} size="sm" title="Duplicar escala"
         footer={<><Button variant="ghost" onClick={() => setDupOpen(false)}>Cancelar</Button><Button variant="primary" onClick={() => void duplicate()}>Duplicar</Button></>}>
-        <Field label="Data da nova escala" hint="A equipe volta como “aguardando confirmação” e o repertório é copiado."><Input type="date" value={dupDate} onChange={(x) => setDupDate(x.target.value)} /></Field>
+        <Field label="Data da nova escala" hint="A equipe e o repertório são copiados para a nova data."><Input type="date" value={dupDate} onChange={(x) => setDupDate(x.target.value)} /></Field>
       </Modal>
       <ConfirmDialog open={delOpen} danger title="Excluir escala?" text="A escala, a equipe e o repertório vinculado serão removidos. Esta ação não pode ser desfeita." confirmLabel="Excluir" onClose={() => setDelOpen(false)} onConfirm={() => void del()} />
     </div>

@@ -81,7 +81,7 @@ function MyAvailability() {
       </div>
       <Modal open={!!day} onClose={() => setDay(null)} size="sm" title={day ? fmtDate(day) : ''}
         footer={<Button variant="ghost" onClick={() => void setStatus(null)}><Eraser className="h-4 w-4" />Limpar</Button>}>
-        {day && evByDate.get(day) && <p className="mb-3 rounded-xl bg-accent/10 p-3 text-sm">Você está escalado(a): {evByDate.get(day)!.map((e) => `${e.title} (${fmtTime(e.start_time)})`).join(', ')}. Se não puder ir, recuse pela própria escala.</p>}
+        {day && evByDate.get(day) && <p className="mb-3 rounded-xl bg-accent/10 p-3 text-sm">Você está escalado(a): {evByDate.get(day)!.map((e) => `${e.title} (${fmtTime(e.start_time)})`).join(', ')}. Se não puder ir, peça uma troca pela própria escala.</p>}
         <div className="grid grid-cols-2 gap-2"><Button variant="primary" onClick={() => void setStatus('available')}><Check className="h-4 w-4" />Disponível</Button><Button variant="danger" onClick={() => void setStatus('unavailable')}><X className="h-4 w-4" />Indisponível</Button></div>
         <Field label="Observação (opcional)" className="mt-4"><Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: viagem, plantão…" /></Field>
       </Modal>
