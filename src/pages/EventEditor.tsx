@@ -211,7 +211,7 @@ export default function EventEditor() {
 
       <Modal open={publishOpen} onClose={() => setPublishOpen(false)} title="Publicar escala"
         footer={<><Button variant="ghost" onClick={() => setPublishOpen(false)}>Voltar e corrigir</Button><Button variant="primary" onClick={() => void publish()}>{blocking.length ? 'Publicar mesmo assim' : 'Publicar'}</Button></>}>
-        <p className="mb-3 text-sm text-muted">Ao publicar, os integrantes escalados recebem uma notificação para confirmar presença.</p>
+        <p className="mb-3 text-sm text-muted">Ao publicar, os integrantes escalados recebem uma notificação com a data e a função.</p>
         {al.length === 0 ? <p className="text-sm text-ok">Nenhum aviso: a escala está completa.</p> : <AlertList alerts={al} />}
       </Modal>
       <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} size="sm" title="Cancelar escala"

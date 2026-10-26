@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, History as HistoryIcon, Search } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
-import { StatusIcon } from '../components/TeamEditor'
 import { useAssignments } from '../lib/events'
 import { resolveItems } from '../lib/setlist'
 import { useCategories } from '../lib/queries'
@@ -31,7 +30,7 @@ function Detail({ e }: { e: H }) {
     <div className="grid gap-5 border-t border-border bg-surface2/40 p-4 md:grid-cols-2">
       <div><p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Quem participou</p>
         {(asg.data ?? []).length === 0 ? <p className="text-sm text-muted">Sem equipe registrada.</p> : (
-          <ul className="space-y-1.5 text-sm">{asg.data!.map((a) => <li key={a.id} className="flex items-center gap-2"><StatusIcon status={a.status} /><span className="font-semibold">{a.member?.full_name}</span><span className="text-muted">· {a.function?.name}</span></li>)}</ul>)}</div>
+          <ul className="space-y-1.5 text-sm">{asg.data!.map((a) => <li key={a.id} className="flex items-center gap-2"><span className="font-semibold">{a.member?.full_name}</span><span className="text-muted">· {a.function?.name}</span></li>)}</ul>)}</div>
       <div><p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Músicas e tonalidades</p>
         {resolved.length === 0 ? <p className="text-sm text-muted">Sem repertório.</p> : (
           <ol className="space-y-1.5 text-sm">{resolved.map((r, i) => <li key={r.id} className="flex items-center gap-2"><span className="w-4 text-xs text-muted">{i + 1}</span><span className="min-w-0 flex-1 truncate">{r.kind === 'song' ? r.song?.title : r.note || 'Momento especial'}</span>{r.key && <Badge tone="accent">{r.key}</Badge>}</li>)}</ol>)}</div>

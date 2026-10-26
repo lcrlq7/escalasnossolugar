@@ -30,7 +30,7 @@ export const useEventSetlist = (eventId?: string) => useQuery({
 })
 export const useEventAlerts = (eventId?: string, enabled = true) => useQuery({
   queryKey: ['alerts', eventId], enabled: !!eventId && enabled,
-  queryFn: async () => (unwrap(await supabase.rpc('event_alerts', { p_event_id: eventId! })) ?? []) as Alert[],
+  queryFn: async () => ((unwrap(await supabase.rpc('event_alerts', { p_event_id: eventId! })) ?? []) as Alert[]).filter((a) => a.type !== 'pending'),
 })
 
 export function nextWeekday(weekday: number, from = new Date()): string {

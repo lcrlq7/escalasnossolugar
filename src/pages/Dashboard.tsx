@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, ArrowRight, CalendarPlus, Megaphone, Music2, Plus, Trash2, Users, Wrench, CalendarDays, Clock, MapPin, TrendingUp } from 'lucide-react'
+import { AlertTriangle, ArrowRight, CalendarPlus, Megaphone, Music2, Plus, Trash2, Wrench, CalendarDays, Clock, MapPin, TrendingUp } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { CalendarView } from '../components/CalendarView'
-import { StatusIcon } from '../components/TeamEditor'
 import { AddSongModal } from '../components/SongForm'
 import { useSongUsage, countBy } from '../lib/usage'
 import { useSongs } from '../lib/queries'
@@ -77,12 +76,10 @@ export default function Dashboard() {
     },
   })
 
-  const myPending = published.filter((e) => e.event_assignments.some((a) => a.member_id === member?.id && a.status === 'pending'))
   const soundPending = published.filter((e) => !e.sound_ready)
   const topSongs = [...countBy(usage.data ?? [], (r) => r.song_id).entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
     .map(([id, n]) => ({ id, n, row: (usage.data ?? []).find((r) => r.song_id === id)! }))
   const teamNext = next ? [...new Map(next.event_assignments.map((a) => [a.member_id, a])).values()] : []
-  const unconfirmed = next ? [...new Set(next.event_assignments.filter((a) => a.status === 'pending').map((a) => a.member?.full_name))] : []
   const incomplete = (alertsQ.data ?? []).filter((r) => r.alerts.some((a) => a.type !== 'pending'))
 
   const publishAnn = async () => {
@@ -128,11 +125,11 @@ export default function Dashboard() {
               </div>
               <div className="grid gap-5 p-5 md:grid-cols-2">
                 <div>
-                  <SectionTitle title="Integrantes escalados" subtitle={unconfirmed.length ? `${unconfirmed.length} ainda não confirmaram` : teamNext.length ? 'Todos confirmaram' : undefined} />
+                  <SectionTitle title="Integrantes escalados" subtitle={teamNext.length ? `${teamNext.length} escalados` : undefined} />
                   {teamNext.length === 0 ? <p className="text-sm text-muted">Equipe ainda não definida.</p> : (
                     <ul className="space-y-2">{next.event_assignments.slice(0, 10).map((a) => (
                       <li key={a.id} className="flex items-center gap-2.5"><Avatar name={a.member?.full_name ?? ''} size={30} />
-                        <span className="min-w-0 flex-1 truncate text-sm"><b className="font-semibold">{a.member?.full_name}</b> <span className="text-muted">· {a.function?.name}</span></span><StatusIcon status={a.status} /></li>))}
+                        <span className="min-w-0 flex-1 truncate text-sm"><b className="font-semibold">{a.member?.full_name}</b> <span className="text-muted">· {a.function?.name}</span></span></li>))}
                       {next.event_assignments.length > 10 && <li className="text-xs text-muted">+ {next.event_assignments.length - 10} integrantes</li>}</ul>)}
                 </div>
                 <div>
@@ -153,11 +150,6 @@ export default function Dashboard() {
         </Card>
 
         <div className="space-y-6">
-          {myPending.length > 0 && (
-            <Card className="border-accent/50 p-5">
-              <SectionTitle title="Aguardando sua resposta" />
-              <ul className="space-y-2">{myPending.map((e) => <li key={e.id}><Link to={`/escalas/${e.id}`} className="flex items-center justify-between gap-2 rounded-xl bg-accent/10 px-3 py-2.5 text-sm font-semibold hover:bg-accent/20"><span className="truncate">{e.title} · {fmtDate(e.event_date)}</span><ArrowRight className="h-4 w-4" /></Link></li>)}</ul>
-            </Card>)}
           {isTech && soundPending.length > 0 && (
             <Card className="p-5"><SectionTitle title="Preparação de som pendente" />
               <ul className="space-y-2">{soundPending.slice(0, 5).map((e) => <li key={e.id}><Link to={`/escalas/${e.id}`} className="flex items-center justify-between gap-2 rounded-xl bg-surface2 px-3 py-2.5 text-sm font-semibold hover:bg-border"><span className="inline-flex items-center gap-2 truncate"><Wrench className="h-4 w-4 text-warn" />{e.title} · {fmtDate(e.event_date)}</span><ArrowRight className="h-4 w-4" /></Link></li>)}</ul></Card>)}
@@ -184,10 +176,9 @@ export default function Dashboard() {
       <SwapPanel />
 
       {isLeader && (
-        <div className="stagger grid gap-4 sm:grid-cols-3">
+        <div className="stagger grid gap-4 sm:grid-cols-2">
           <Stat icon={<CalendarDays className="h-5 w-5" />} label="Escalas neste mês" value={monthCount.data ?? '–'} />
           <Stat icon={<Music2 className="h-5 w-5" />} label="Músicas na biblioteca" value={songs.data?.length ?? '–'} />
-          <Stat icon={<Users className="h-5 w-5" />} label="Aguardando confirmação (próximo culto)" value={next ? unconfirmed.length : '–'} />
         </div>)}
 
       <div className="stagger grid gap-6 lg:grid-cols-[1fr_22rem]">

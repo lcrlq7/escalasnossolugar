@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Circle, Clock, FileDown, MapPin, Pencil, Play, Repeat2, Wrench, XCircle, Link2, Mic2, Youtube, Music2 } from 'lucide-react'
+import { CheckCircle2, Circle, Clock, FileDown, MapPin, Pencil, Play, Repeat2, Wrench, Link2, Mic2, Youtube, Music2 } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { useCategories } from '../lib/queries'
-import { AlertList, StatusIcon } from '../components/TeamEditor'
+import { AlertList } from '../components/TeamEditor'
 import { PlayerView } from '../components/PlayerView'
 import { useAssignments, useEventAlerts, useEventFull, useEventSetlist } from '../lib/events'
 import { resolveItems, shareUrl, totalSeconds } from '../lib/setlist'
 import { exportEventPdf } from '../lib/pdf'
-import { EVENT_TYPES, RESPONSE_LABEL, STATUS_LABEL, fmtDateLong, fmtDuration, fmtTime, fmtTotal, safeUrl } from '../lib/utils'
+import { EVENT_TYPES, STATUS_LABEL, fmtDateLong, fmtDuration, fmtTime, fmtTotal, safeUrl } from '../lib/utils'
 import type { SetlistItem } from '../types'
-import { Avatar, Badge, Button, Card, Cover, EmptyState, Modal, PageLoader, SectionTitle, Textarea, Toggle } from '../components/ui'
+import { Avatar, Badge, Button, Card, Cover, EmptyState, PageLoader, SectionTitle, Textarea, Toggle } from '../components/ui'
 import { statusTone } from './Events'
 import { SwapModal } from '../components/SwapModal'
 import { SetlistEditor } from '../components/SetlistEditor'
@@ -35,8 +35,6 @@ export default function EventView() {
   const [tech, setTech] = useState('')
   const [ready, setReady] = useState(false)
   const [savingTech, setSavingTech] = useState(false)
-  const [declineOpen, setDeclineOpen] = useState(false)
-  const [reason, setReason] = useState('')
   const [player, setPlayer] = useState(false)
   const [swapFor, setSwapFor] = useState<string | null>(null)
   useEffect(() => { if (ev.data) { setTech(ev.data.tech_notes ?? ''); setReady(ev.data.sound_ready) } }, [ev.data])
@@ -48,18 +46,12 @@ export default function EventView() {
   const team = [...(asg.data ?? [])].sort((a, b) => (a.function?.sort_order ?? 0) - (b.function?.sort_order ?? 0) || (a.member?.full_name ?? '').localeCompare(b.member?.full_name ?? ''))
   const mine = team.filter((a) => a.member_id === member?.id)
   const peopleIds = new Set(team.map((a) => a.member_id))
-  const confirmedIds = new Set(team.filter((a) => a.status === 'confirmed').map((a) => a.member_id))
   const tot = totalSeconds(resolved)
   const isEventLead = !!member?.id && member.id === e.leader_member_id && e.status !== 'cancelled'
   const canTech = isLeader || (isTech && e.status !== 'draft')
   const canRespond = mine.length > 0 && e.status === 'published'
-  const myState = mine.some((m) => m.status === 'declined') ? 'declined' : mine.length && mine.every((m) => m.status === 'confirmed') ? 'confirmed' : 'pending'
 
   const refresh = () => { qc.invalidateQueries({ queryKey: ['assignments', id] }); qc.invalidateQueries({ queryKey: ['event', id] }); qc.invalidateQueries({ queryKey: ['events-list'] }); qc.invalidateQueries({ queryKey: ['alerts', id] }) }
-  const respond = async (status: 'confirmed' | 'declined', why?: string) => {
-    try { unwrap(await supabase.rpc('respond_event', { p_event_id: e.id, p_status: status, p_reason: why ?? null })); toast.success(status === 'confirmed' ? 'Presença confirmada. Obrigado!' : 'Resposta registrada. O líder foi avisado.'); setDeclineOpen(false); refresh() }
-    catch (err) { toast.error(err) }
-  }
   const toggleRehearsed = async (itemId: string, value: boolean) => {
     try { unwrap(await supabase.rpc('set_item_rehearsed', { p_item: itemId, p_value: value })); qc.invalidateQueries({ queryKey: ['setlist-items-event'] }) }
     catch (err) { toast.error(err) }
@@ -76,7 +68,7 @@ export default function EventView() {
   const pdf = () => exportEventPdf({
     church: church?.name ?? '', title: e.title, subtitle: `${fmtDateLong(e.event_date)} · ${fmtTime(e.start_time)}${e.end_time ? ` – ${fmtTime(e.end_time)}` : ''} · ${STATUS_LABEL[e.status]}`,
     leader: e.leader?.full_name, location: e.location, notes: e.notes, techNotes: e.tech_notes,
-    team: team.map((t) => ({ role: t.function?.name ?? '', name: t.member?.full_name ?? '', status: RESPONSE_LABEL[t.status] })), items: resolved,
+    team: team.map((t) => ({ role: t.function?.name ?? '', name: t.member?.full_name ?? '', status: '' })), items: resolved,
   })
 
   return (
@@ -106,15 +98,11 @@ export default function EventView() {
       </div>
 
       {canRespond && (
-        <div className={`mb-6 rounded-2xl border p-4 ${myState === 'confirmed' ? 'border-ok/40 bg-ok/10' : myState === 'declined' ? 'border-danger/40 bg-danger/10' : 'border-accent/50 bg-accent/10'}`}>
+        <div className="mb-6 rounded-2xl border border-accent/50 bg-accent/10 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><p className="font-bold">{myState === 'pending' ? 'Você está escalado(a) neste culto' : myState === 'confirmed' ? 'Você confirmou presença' : 'Você recusou esta escala'}</p>
+            <div><p className="font-bold">Você está escalado(a) neste culto</p>
               <p className="text-sm text-muted">Funções: {mine.map((m) => m.function?.name).join(', ')}</p></div>
-            <div className="flex gap-2">
-              <Button variant={myState === 'confirmed' ? 'secondary' : 'primary'} onClick={() => void respond('confirmed')}><CheckCircle2 className="h-4 w-4" />{myState === 'confirmed' ? 'Confirmado' : 'Confirmar presença'}</Button>
-              <Button variant="danger" onClick={() => setDeclineOpen(true)}><XCircle className="h-4 w-4" />Não poderei</Button>
-              {mine[0] && new Date(`${e.event_date}T23:59:59`) >= new Date() && <Button onClick={() => setSwapFor(mine[0].id)}><Repeat2 className="h-4 w-4" />Pedir troca</Button>}
-            </div>
+            {mine[0] && new Date(`${e.event_date}T23:59:59`) >= new Date() && <Button onClick={() => setSwapFor(mine[0].id)}><Repeat2 className="h-4 w-4" />Pedir troca</Button>}
           </div>
         </div>)}
 
@@ -123,14 +111,13 @@ export default function EventView() {
       <div className="grid gap-6 lg:grid-cols-[22rem_1fr]">
         <div className="space-y-6">
           <Card className="p-5">
-            <SectionTitle title="Equipe" subtitle={`${peopleIds.size} escalados · ${confirmedIds.size} confirmados`} />
+            <SectionTitle title="Equipe" subtitle={`${peopleIds.size} escalados`} />
             {team.length === 0 ? <p className="text-sm text-muted">Equipe ainda não definida.</p> : (
               <ul className="space-y-2.5">
                 {team.map((t) => (
                   <li key={t.id} className="flex items-center gap-3">
                     <Avatar name={t.member?.full_name ?? ''} size={34} />
                     <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{t.member?.full_name}</p><p className="text-xs text-muted">{t.function?.name}</p></div>
-                    <span className="inline-flex items-center gap-1 text-xs text-muted" title={t.decline_reason ?? undefined}><StatusIcon status={t.status} />{RESPONSE_LABEL[t.status]}</span>
                   </li>))}
               </ul>)}
           </Card>
@@ -181,11 +168,6 @@ export default function EventView() {
 
       <SwapModal open={!!swapFor} assignmentId={swapFor} eventId={e.id} onClose={() => setSwapFor(null)} />
       {player && <PlayerView title={e.title} items={resolved} onClose={() => setPlayer(false)} />}
-      <Modal open={declineOpen} onClose={() => setDeclineOpen(false)} size="sm" title="Não poderei participar"
-        footer={<><Button variant="ghost" onClick={() => setDeclineOpen(false)}>Voltar</Button><Button variant="danger" onClick={() => void respond('declined', reason.trim())}>Confirmar recusa</Button></>}>
-        <p className="mb-3 text-sm text-muted">O líder será avisado para reorganizar a equipe.</p>
-        <Textarea value={reason} onChange={(x) => setReason(x.target.value)} placeholder="Motivo (opcional)" />
-      </Modal>
     </div>
   )
 }

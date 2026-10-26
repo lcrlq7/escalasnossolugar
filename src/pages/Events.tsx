@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarPlus, CalendarRange, CheckCircle2, ClipboardList, Clock, MapPin, Search, Users, XCircle } from 'lucide-react'
+import { CalendarPlus, CalendarRange, ClipboardList, Clock, MapPin, Search, Users } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
@@ -25,12 +25,9 @@ export function DateBlock({ date }: { date: string }) {
   )
 }
 
-export function EventCard({ e, myMemberId }: { e: EventListItem; myMemberId?: string | null }) {
+export function EventCard({ e }: { e: EventListItem; myMemberId?: string | null }) {
   const a = e.event_assignments ?? []
   const people = new Set(a.map((x) => x.member_id))
-  const confirmed = new Set(a.filter((x) => x.status === 'confirmed').map((x) => x.member_id)).size
-  const mine = myMemberId ? a.filter((x) => x.member_id === myMemberId) : []
-  const myStatus: ResponseStatus | null = mine.length ? (mine.some((m) => m.status === 'declined') ? 'declined' : mine.every((m) => m.status === 'confirmed') ? 'confirmed' : 'pending') : null
   return (
     <Link to={`/escalas/${e.id}`} className="card flex items-center gap-4 p-4 transition hover:border-accent/60">
       <DateBlock date={e.event_date} />
@@ -43,15 +40,9 @@ export function EventCard({ e, myMemberId }: { e: EventListItem; myMemberId?: st
           <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{fmtTime(e.start_time)}{e.end_time ? ` – ${fmtTime(e.end_time)}` : ''}</span>
           <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ background: EVENT_TYPES[e.event_type]?.color }} />{EVENT_TYPES[e.event_type]?.label}</span>
           {e.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{e.location}</span>}
-          <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{people.size} escalados · {confirmed} confirmados</span>
+          <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{people.size} escalados</span>
         </div>
       </div>
-      {myStatus && (
-        <span className="hidden shrink-0 sm:block">
-          {myStatus === 'confirmed' ? <Badge tone="ok"><CheckCircle2 className="h-3.5 w-3.5" />Você confirmou</Badge>
-            : myStatus === 'declined' ? <Badge tone="danger"><XCircle className="h-3.5 w-3.5" />Você recusou</Badge>
-              : <Badge tone="warn"><Clock className="h-3.5 w-3.5" />Responder</Badge>}
-        </span>)}
     </Link>
   )
 }

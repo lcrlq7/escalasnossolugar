@@ -4,7 +4,7 @@ import { AlertTriangle, CheckCircle2, Clock, Info, Sparkles, XCircle, X } from '
 import { supabase, unwrap } from '../lib/supabase'
 import { useFunctions, useMembers } from '../lib/queries'
 import { useToast } from '../context/Toast'
-import { cn, RESPONSE_LABEL } from '../lib/utils'
+import { cn } from '../lib/utils'
 import type { Alert, EventRow, ResponseStatus } from '../types'
 import type { AssignmentFull } from '../lib/events'
 import { Badge, Button, Modal, Select } from './ui'
@@ -101,10 +101,9 @@ export function TeamEditor({ event, assignments }: { event: EventRow; assignment
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {here.map((a) => (
-                <span key={a.id} className={cn('inline-flex items-center gap-1.5 rounded-full border py-1 pl-2.5 pr-1.5 text-sm',
+                <span key={a.id} className={cn('inline-flex items-center gap-1.5 rounded-full border py-1 pl-3 pr-1.5 text-sm',
                   unavailable.has(a.member_id) ? 'border-danger/50 bg-danger/10' : 'border-border bg-surface2')}>
-                  <StatusIcon status={a.status} className="h-3.5 w-3.5" />{a.member?.full_name}
-                  <span className="sr-only">{RESPONSE_LABEL[a.status]}</span>
+                  {a.member?.full_name}
                   <button onClick={() => void remove(a.id)} aria-label={`Remover ${a.member?.full_name}`} className="rounded-full p-0.5 text-muted hover:bg-border hover:text-fg"><X className="h-3.5 w-3.5" /></button>
                 </span>
               ))}
