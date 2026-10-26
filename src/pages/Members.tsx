@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Mail, Pencil, Phone, Plus, Search, UserCheck } from 'lucide-react'
+import { Mail, Pencil, Phone, Plus, Search, Trash2, UserCheck } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { useFunctions, useMembers } from '../lib/queries'
 import { cn, normalize } from '../lib/utils'
 import type { Member } from '../types'
-import { Avatar, Badge, Button, EmptyState, Field, Input, Modal, PageHeader, PageLoader, Textarea, Toggle } from '../components/ui'
+import { Avatar, Badge, Button, ConfirmDialog, EmptyState, Field, Input, Modal, PageHeader, PageLoader, Textarea, Toggle } from '../components/ui'
 
 function MemberModal({ open, member, onClose }: { open: boolean; member: Member | null; onClose: () => void }) {
   const { church } = useAuth()
@@ -18,6 +18,7 @@ function MemberModal({ open, member, onClose }: { open: boolean; member: Member 
   const [sel, setSel] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [loaded, setLoaded] = useState<string | null>(null)
+  const [delOpen, setDelOpen] = useState(false)
   const key = open ? (member?.id ?? 'new') : null
   if (key && loaded !== key) {
     setLoaded(key)
@@ -41,9 +42,21 @@ function MemberModal({ open, member, onClose }: { open: boolean; member: Member 
       qc.invalidateQueries({ queryKey: ['members'] }); onClose()
     } catch (e) { toast.error(e) } finally { setSaving(false) }
   }
+  const remove = async () => {
+    if (!member) return
+    try {
+      unwrap(await supabase.from('members').delete().eq('id', member.id).select())
+      toast.success('Integrante excluído.'); setDelOpen(false); qc.invalidateQueries({ queryKey: ['members'] }); onClose()
+    } catch (e) {
+      setDelOpen(false)
+      const m = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? '')
+      if (/foreign key|violates|23503|event_assignments/i.test(m)) toast.error('Este integrante já está em escalas e não pode ser excluído. Desative-o: ele deixa de aparecer para novas escalas e o histórico é mantido.')
+      else toast.error(e)
+    }
+  }
   return (
     <Modal open={open} onClose={onClose} title={member ? 'Editar integrante' : 'Novo integrante'}
-      footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" loading={saving} onClick={() => void save()}>Salvar</Button></>}>
+      footer={<>{member && <Button variant="ghost" className="mr-auto text-danger" onClick={() => setDelOpen(true)}><Trash2 className="h-4 w-4" />Excluir</Button>}<Button variant="ghost" onClick={onClose}>Cancelar</Button><Button variant="primary" loading={saving} onClick={() => void save()}>Salvar</Button></>}>
       <div className="space-y-4">
         <Field label="Nome completo *"><Input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></Field>
         <div className="stagger grid gap-4 sm:grid-cols-2">
@@ -58,12 +71,13 @@ function MemberModal({ open, member, onClose }: { open: boolean; member: Member 
         <Field label="Observações"><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>
         <Toggle checked={f.active} onChange={(v) => setF({ ...f, active: v })} label="Integrante ativo (pode ser escalado)" />
       </div>
+      <ConfirmDialog open={delOpen} danger title="Excluir integrante?" text={`${member?.full_name ?? ''} será removido da lista${member?.profile_id ? ' e perderá o vínculo com a conta de acesso (a conta continua existindo)' : ''}. Se já participou de escalas, desative em vez de excluir.`} confirmLabel="Excluir" onClose={() => setDelOpen(false)} onConfirm={() => void remove()} />
     </Modal>
   )
 }
 
 export default function Members() {
-  const { isAdmin } = useAuth()
+  const { isLeader: isAdmin } = useAuth()
   const members = useMembers()
   const fns = useFunctions()
   const [q, setQ] = useState('')
@@ -81,7 +95,7 @@ export default function Members() {
         {isAdmin && <Toggle checked={showInactive} onChange={setShowInactive} label="Mostrar inativos" />}
       </div>
       {members.isLoading ? <PageLoader /> : list.length === 0 ? (
-        <EmptyState title="Nenhum integrante cadastrado" text={isAdmin ? 'Cadastre os integrantes do ministério. Só quem está na lista pode ser escalado.' : 'Um administrador ainda não cadastrou integrantes.'}
+        <EmptyState title="Nenhum integrante cadastrado" text={isAdmin ? 'Cadastre os integrantes do ministério. Só quem está na lista pode ser escalado.' : 'Um líder ainda não cadastrou integrantes.'}
           action={isAdmin && <Button variant="primary" onClick={() => { setEdit(null); setOpen(true) }}><Plus className="h-4 w-4" />Cadastrar integrante</Button>} />
       ) : (
         <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
