@@ -43,12 +43,21 @@ export default function EventEditor() {
     queryFn: async () => unwrap(await supabase.from('events').select('event_date, event_type').gte('event_date', todayStr()).neq('status', 'cancelled')) as { event_date: string; event_type: string }[],
   })
   // datas prontas: próximos 6 domingos 18h e quintas 19h30 (ou os horários cadastrados)
-  const quick = useMemo(() => {
+  const rules = useMemo(() => {
     const base = (schedules.data ?? []).filter((x) => x.active && (x.event_type === 'sunday_service' || x.event_type === 'thursday_service'))
-    const rules = base.length ? base.map((x) => ({ weekday: x.weekday, time: x.start_time.slice(0, 5), type: x.event_type, title: x.name?.trim() || EVENT_TYPES[x.event_type].label, location: x.location ?? '' }))
+    return base.length ? base.map((x) => ({ weekday: x.weekday, time: x.start_time.slice(0, 5), type: x.event_type, title: x.name?.trim() || EVENT_TYPES[x.event_type].label, location: x.location ?? '' }))
       : [{ weekday: 0, time: '18:00', type: 'sunday_service' as EventType, title: EVENT_TYPES.sunday_service.label, location: '' }, { weekday: 4, time: '19:30', type: 'thursday_service' as EventType, title: EVENT_TYPES.thursday_service.label, location: '' }]
-    return rules.flatMap((r) => Array.from({ length: 6 }, (_, k) => ({ ...r, date: addDays(nextWeekday(r.weekday), 7 * k) }))).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).slice(0, 10)
   }, [schedules.data])
+  const quick = useMemo(() => rules.flatMap((r) => Array.from({ length: 6 }, (_, k) => ({ ...r, date: addDays(nextWeekday(r.weekday), 7 * k) }))).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).slice(0, 10), [rules])
+  // ao trocar a data, o nome, o tipo e o horário acompanham o dia da semana (quinta = culto de quinta, domingo = culto de domingo)
+  const onDate = (v: string) => setF((p) => {
+    const next = { ...p, event_date: v }
+    if (!isNew || !v) return next
+    const auto = !p.title.trim() || Object.values(EVENT_TYPES).some((x) => x.label === p.title) || rules.some((r) => r.title === p.title)
+    const r = rules.find((x) => x.weekday === parseDate(v).getDay())
+    if (r && auto) return { ...next, title: r.title, event_type: r.type, start_time: r.time }
+    return next
+  })
   const pickQuick = (q: (typeof quick)[number]) => setF((p) => ({ ...p, event_date: q.date, start_time: q.time, event_type: q.type, title: q.title, location: p.location || q.location }))
   const [publishOpen, setPublishOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
@@ -156,7 +165,7 @@ export default function EventEditor() {
                 </div>
               </div>)}
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Data *"><Input type="date" value={f.event_date} onChange={(x) => set('event_date', x.target.value)} /></Field>
+              <Field label="Data *"><Input type="date" value={f.event_date} onChange={(x) => onDate(x.target.value)} /></Field>
               <Field label="Início *"><Input type="time" value={f.start_time} onChange={(x) => set('start_time', x.target.value)} /></Field>
               <Field label="Ministro responsável" className="sm:col-span-2" hint="Quem for escolhido aqui monta o repertório e cria a playlist desta escala."><Select value={f.leader_member_id} onChange={(x) => set('leader_member_id', x.target.value)}><option value="">Selecionar…</option>
                 {(members.data ?? []).filter((m) => m.active).map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}</Select></Field>
