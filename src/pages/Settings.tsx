@@ -89,9 +89,9 @@ function UsersTab() {
   const linked = (uid: string) => (members.data ?? []).find((m) => m.profile_id === uid)
   const Row = ({ u }: { u: UserRow }) => (
     <Card className="space-y-3 p-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <Avatar name={u.full_name} />
-        <div className="min-w-0 flex-1"><p className="truncate font-bold">{u.full_name}</p><p className="truncate text-xs text-muted">{u.email}</p></div>
+        <div className="min-w-[9rem] flex-1"><p className="truncate font-bold">{u.full_name}</p><p className="truncate text-xs text-muted">{u.email}</p></div>
         {u.active ? <Badge tone="ok">Ativo</Badge> : <Badge tone="warn">Aguardando</Badge>}
         {u.id === session?.user.id ? <Badge>Você</Badge> : u.active
           ? <Button size="sm" variant="outline" loading={busy === u.id} onClick={() => setActive(u, false)}>Desativar</Button>
@@ -125,8 +125,8 @@ function UsersTab() {
   )
   return (
     <div className="space-y-6">
-      {pending.length > 0 && <div><SectionTitle title={`Aguardando liberação (${pending.length})`} /><div className="grid gap-3 lg:grid-cols-2">{pending.map((u) => <Row key={u.id} u={u} />)}</div></div>}
-      <div><SectionTitle title="Usuários" /><div className="grid gap-3 lg:grid-cols-2">{(q.data ?? []).filter((u) => u.active).map((u) => <Row key={u.id} u={u} />)}</div></div>
+      {pending.length > 0 && <div><SectionTitle title={`Aguardando liberação (${pending.length})`} /><div className="grid grid-cols-1 gap-3 lg:grid-cols-2">{pending.map((u) => <Row key={u.id} u={u} />)}</div></div>}
+      <div><SectionTitle title="Usuários" /><div className="grid grid-cols-1 gap-3 lg:grid-cols-2">{(q.data ?? []).filter((u) => u.active).map((u) => <Row key={u.id} u={u} />)}</div></div>
     </div>
   )
 }

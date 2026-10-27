@@ -144,3 +144,7 @@ a.card:hover, button.card:hover, .card.lift:hover { transform: translateY(-3px);
 .recharts-cartesian-axis-tick-value, .recharts-legend-item-text, .recharts-pie-label-text { fill: rgb(var(--muted)) !important; font-size: 12px; }
 .recharts-cartesian-grid line { stroke: rgb(var(--border)); }
 .recharts-tooltip-cursor { fill: rgb(var(--surface2) / .6); }
+
+/* Celular: itens de grade nunca empurram a página para os lados (cartões cortados na borda) */
+.grid > * { min-width: 0; }
+main { overflow-x: clip; }
