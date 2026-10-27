@@ -190,7 +190,7 @@ export default function Songs() {
       <Tabs value={tab === 'sug' ? 'sug' : 'lib'} onChange={(v) => setSp(v === 'sug' ? { aba: 'sugestoes' } : {})} items={[{ value: 'lib', label: 'Biblioteca', count: (songs.data ?? []).filter((s) => !s.archived).length }, { value: 'sug', label: 'Sugestões' }]} />
       {isLeader && tab !== 'sug' && <Fab label="Adicionar música" onClick={() => setAdd(true)}><Plus className="h-6 w-6" /></Fab>}
       {tab === 'sug' ? <Suggestions /> : (<>
-        <div className="sticky top-[57px] z-20 -mx-4 mb-3 space-y-2 bg-bg/90 px-4 pb-2 pt-2 backdrop-blur md:static md:mx-0 md:flex md:flex-wrap md:space-y-0 md:gap-2 md:bg-transparent md:p-0 md:pb-0 md:backdrop-blur-none md:mb-4">
+        <div className="sticky top-[60px] z-20 -mx-4 mb-3 space-y-2 bg-bg/90 px-4 pb-2 pt-2 backdrop-blur md:static md:mx-0 md:flex md:flex-wrap md:space-y-0 md:gap-2 md:bg-transparent md:p-0 md:pb-0 md:backdrop-blur-none md:mb-4">
           <div className="relative min-w-[14rem] flex-1"><Search className="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-muted" /><Input className="!pl-10" placeholder="Buscar por título, artista, álbum ou tag" value={q} onChange={(e) => { setQ(e.target.value); setShown(60) }} /></div>
           <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 md:mx-0 md:px-0">
             {([['all', 'Todas'], ['fav', 'Favoritas'], ['habitual', 'Habituais'], ...(isLeader ? [['archived', 'Arquivadas']] : [])] as [typeof only, string][]).map(([v, l]) => (

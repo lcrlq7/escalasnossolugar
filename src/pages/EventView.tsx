@@ -137,6 +137,11 @@ export default function EventView() {
 
         <Card className="p-5">
           <SectionTitle title="Repertório" subtitle={resolved.length ? `${resolved.filter((r) => r.kind === 'song').length} músicas · ${fmtTotal(tot.total)} · ${resolved.filter((r) => r.kind === 'song' && r.rehearsed).length} ensaiadas` : undefined} />
+          {sl.data?.playlist_url && /^https:\/\/open\.spotify\.com\//.test(sl.data.playlist_url) && (
+            <a href={sl.data.playlist_url} target="_blank" rel="noreferrer" className="mb-4 flex items-center gap-3 rounded-xl border border-ok/40 bg-ok/10 p-3 transition hover:bg-ok/15">
+              <Music2 className="h-6 w-6 shrink-0 text-ok" /><div className="min-w-0 flex-1"><p className="text-sm font-bold">Playlist do culto no Spotify</p><p className="text-xs text-muted">Criada pelo ministro. Toque para ouvir e ensaiar.</p></div>
+              <span className="shrink-0 rounded-lg bg-ok px-3 py-1.5 text-xs font-bold text-white">Abrir</span>
+            </a>)}
           {(isEventLead || isLeader) && e.status !== 'cancelled' && sl.data ? (<>
             {!isLeader && <p className="mb-3 rounded-xl bg-accent/10 px-3 py-2 text-sm">Você é o ministro responsável por esta escala: monte o repertório, ajuste os tons e crie a playlist.</p>}
             <SetlistEditor setlist={sl.data} eventType={e.event_type} />

@@ -43,7 +43,7 @@ export interface Song {
 export interface Category { id: string; church_id: string; name: string; sort_order: number }
 export interface Setlist {
   id: string; church_id: string; name: string; event_id: string | null; is_template: boolean
-  is_favorite: boolean; theme: string | null; notes: string | null; share_token: string
+  is_favorite: boolean; theme: string | null; notes: string | null; share_token: string; playlist_url: string | null
   created_at: string; updated_at: string
 }
 export type ItemKind = 'song' | 'note' | 'prayer' | 'transition'

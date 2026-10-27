@@ -21,7 +21,7 @@ const ytId = (u: string | null | undefined): string | null => {
 interface Cand { id: string; title: string; artist: string; album: string | null; url: string | null }
 interface Found { song_id: string; known_id: string | null; candidates: Cand[]; error: string | null }
 
-export function PlaylistModal({ open, onClose, items, name }: { open: boolean; onClose: () => void; items: ResolvedItem[]; name?: string }) {
+export function PlaylistModal({ open, onClose, items, name, setlistId }: { open: boolean; onClose: () => void; items: ResolvedItem[]; name?: string; setlistId?: string }) {
   const { session } = useAuth()
   const canPlan = useQuery({ queryKey: ['can-plan', session?.user.id], enabled: open && !!session, queryFn: async () => unwrap(await supabase.rpc('can_plan_playlists')) as boolean })
   const isLeader = canPlan.data === true
@@ -67,6 +67,10 @@ export function PlaylistModal({ open, onClose, items, name }: { open: boolean; o
     try {
       const d = await callSp({ action: 'create', name: name ?? 'Louvor em Escala', trackIds })
       setCreated(d.url ?? '#')
+      // guarda o link na escala: toda a equipe abre a playlist direto, sem criar a sua
+      if (d.url && setlistId) {
+        try { unwrap(await supabase.rpc('set_setlist_playlist', { p_setlist: setlistId, p_url: d.url })); qc.invalidateQueries({ queryKey: ['event-setlist'] }) } catch (e2) { toast.error(e2) }
+      }
       // guarda o link do Spotify nas músicas que ainda não tinham
       for (const r of found ?? []) {
         const c = r.candidates.find((x) => x.id === pick[r.song_id])

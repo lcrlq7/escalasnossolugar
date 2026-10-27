@@ -168,7 +168,8 @@ export function Layout() {
       </aside>
 
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-bg/85 px-4 py-2.5 backdrop-blur md:px-8">
+        <div className="h-[3.75rem] shrink-0" aria-hidden />
+        <header className="fixed inset-x-0 top-0 z-30 flex h-[3.75rem] items-center justify-between gap-3 border-b border-border bg-bg/90 px-4 backdrop-blur md:left-64 md:px-8">
           <div className="md:hidden"><Brand compact /></div>
           <div className="hidden md:block" />
           <div className="flex items-center gap-1">
