@@ -199,7 +199,7 @@ export default function EventEditor() {
         </div>
 
         {e && (
-          <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+          <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
             <Card className="p-5">
               <SectionTitle title="Avisos da escala" />
               {al.length === 0 ? <p className="text-sm text-ok">Tudo certo: nenhum aviso pendente.</p> : <AlertList alerts={al} />}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -144,16 +144,17 @@ export function Layout() {
     document.addEventListener('pointermove', h, { passive: true })
     return () => document.removeEventListener('pointermove', h)
   }, [])
-  useEffect(() => setDrawer(false), [loc.pathname])
+  const scroller = useRef<HTMLDivElement>(null)
+  useEffect(() => { setDrawer(false); scroller.current?.scrollTo({ top: 0 }) }, [loc.pathname])
   useEffect(() => { if (church?.system_name) document.title = church.system_name }, [church?.system_name])
   const bottom = items.filter((i) => ['/', '/minhas-escalas', '/escalas', '/calendario', '/musicas'].includes(i.to))
 
   return (
-    <div className="relative flex min-h-full">
+    <div className="relative flex h-full overflow-hidden" style={{ height: "100dvh" }}>
       <div className="aurora" aria-hidden><i className="animate-float left-[8%] top-[-8%] h-80 w-80 bg-accent/60" /><i className="animate-float2 bottom-[-10%] right-[5%] h-96 w-96 bg-info/50" /></div>
       <datalist id="keys-list">{KEYS.map((k) => <option key={k} value={k} />)}</datalist>
       {/* Menu lateral (computador) */}
-      <aside className="relative z-10 sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-surface px-4 py-5 md:flex">
+      <aside className="relative z-10 sticky top-0 hidden h-full w-64 shrink-0 flex-col border-r border-border bg-surface px-4 py-5 md:flex">
         <Brand />
         <p className="mt-3 px-1 text-[11px] font-bold uppercase tracking-widest text-muted">{church?.system_name ?? 'Louvor em Escala'}</p>
         <nav className="mt-4 flex-1 space-y-1 overflow-y-auto">
@@ -167,9 +168,8 @@ export function Layout() {
         </nav>
       </aside>
 
-      <div className="relative z-10 flex min-w-0 flex-1 flex-col">
-        <div className="h-[3.75rem] shrink-0" aria-hidden />
-        <header style={{ transform: "translateZ(0)", WebkitTransform: "translateZ(0)" }} className="fixed inset-x-0 top-0 z-30 flex h-[3.75rem] items-center justify-between gap-3 border-b border-border bg-bg/90 px-4 backdrop-blur md:left-64 md:px-8">
+      <div className="relative z-10 flex h-full min-w-0 flex-1 flex-col">
+        <header className="relative z-30 flex h-[3.75rem] shrink-0 items-center justify-between gap-3 border-b border-border bg-bg/90 px-4 backdrop-blur md:px-8">
           <div className="md:hidden"><Brand compact /></div>
           <div className="hidden md:block" />
           <div className="flex items-center gap-1">
@@ -177,9 +177,11 @@ export function Layout() {
             <UserMenu />
           </div>
         </header>
-        <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 pb-28 pt-6 md:px-8 md:pb-12">
-          <div key={loc.pathname} className="page-enter"><Outlet /></div>
-        </main>
+        <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+          <main className="mx-auto w-full min-w-0 max-w-6xl px-4 pb-28 pt-6 md:px-8 md:pb-12">
+            <div key={loc.pathname} className="page-enter"><Outlet /></div>
+          </main>
+        </div>
       </div>
 
       {/* Navegação inferior (celular) */}
