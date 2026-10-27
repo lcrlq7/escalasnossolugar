@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { UnavailablePanel } from './Availability'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, ArrowRight, CalendarPlus, Megaphone, Music2, Plus, Trash2, Wrench, CalendarDays, Clock, MapPin, TrendingUp } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
@@ -162,6 +163,7 @@ export default function Dashboard() {
                     <p className="flex items-center gap-2 text-sm font-semibold"><AlertTriangle className="h-4 w-4 shrink-0 text-warn" /><span className="truncate">{r.title} · {fmtDate(r.event_date)}</span></p>
                     <p className="mt-1 text-xs text-muted">{r.alerts.filter((a) => a.type !== 'pending').map((a) => a.message).slice(0, 2).join(' · ')}</p></Link></li>))}</ul>)}
             </Card>)}
+          {isLeader && <UnavailablePanel from={today} to={addDays(today, 30)} title="Indisponíveis nos próximos 30 dias" subtitle="Quem marcou que não pode servir" limit={6} />}
           <Card className="p-5">
             <SectionTitle title="Avisos importantes" action={isLeader && <Button variant="ghost" className="!px-2 !py-1 text-xs" onClick={() => setAnnOpen(true)}><Megaphone className="h-4 w-4" />Novo</Button>} />
             {(anns.data ?? []).length === 0 ? <p className="text-sm text-muted">Nenhum aviso no momento.</p> : (

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -8,7 +9,7 @@ import { useToast } from '../context/Toast'
 import { useMembers } from '../lib/queries'
 import { cn, fmtDate, fmtTime, monthLabel, toISODate, todayStr } from '../lib/utils'
 import type { EventRow } from '../types'
-import { Badge, Button, Card, EmptyState, Field, IconButton, Input, Modal, PageHeader, PageLoader, Tabs } from '../components/ui'
+import { Badge, Button, Card, EmptyState, Field, IconButton, Input, Modal, PageHeader, PageLoader, SectionTitle, Tabs } from '../components/ui'
 
 interface Av { id: string; member_id: string; date: string; status: 'available' | 'unavailable'; note: string | null }
 
@@ -89,7 +90,38 @@ function MyAvailability() {
   )
 }
 
+/** Lista para o líder: quem marcou indisponível no período (e se já está escalado nesse dia). */
+export function UnavailablePanel({ from, to, title, subtitle, action, limit }: { from: string; to: string; title: string; subtitle?: string; action?: ReactNode; limit?: number }) {
+  const q = useQuery({
+    queryKey: ['unavailable-panel', from, to],
+    queryFn: async () => {
+      const av = unwrap(await supabase.from('availability').select('member_id, date, note, member:members(full_name)').eq('status', 'unavailable').gte('date', from).lte('date', to).order('date')) as unknown as { member_id: string; date: string; note: string | null; member: { full_name: string } | { full_name: string }[] | null }[]
+      const asg = unwrap(await supabase.from('event_assignments').select('member_id, event:events!inner(event_date, status)').gte('event.event_date', from).lte('event.event_date', to).in('event.status', ['draft', 'published'])) as unknown as { member_id: string; event: { event_date: string } | { event_date: string }[] }[]
+      const sch = new Set(asg.map((a) => `${a.member_id}|${(Array.isArray(a.event) ? a.event[0] : a.event)?.event_date}`))
+      return av.map((a) => ({ ...a, name: (Array.isArray(a.member) ? a.member[0] : a.member)?.full_name ?? '—', scheduled: sch.has(`${a.member_id}|${a.date}`) }))
+    },
+  })
+  const byDate = new Map<string, NonNullable<typeof q.data>>()
+  for (const r of q.data ?? []) byDate.set(r.date, [...(byDate.get(r.date) ?? []), r])
+  const dates = [...byDate.keys()].sort().slice(0, limit ?? 100)
+  return (
+    <Card className="p-5">
+      <SectionTitle title={title} subtitle={subtitle} action={action} />
+      {q.isLoading ? <p className="text-sm text-muted">Carregando…</p> : dates.length === 0 ? <p className="text-sm text-ok">Ninguém marcou indisponibilidade neste período.</p> : (
+        <ul className="space-y-2">{dates.map((d) => (
+          <li key={d} className="rounded-xl border border-border p-3">
+            <p className="text-sm font-bold">{fmtDate(d)}</p>
+            <ul className="mt-1.5 space-y-1">{byDate.get(d)!.map((r) => (
+              <li key={r.member_id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"><span className="font-semibold">{r.name}</span>
+                {r.scheduled && <Badge tone="warn">já escalado(a) — trocar</Badge>}
+                {r.note && <span className="text-xs text-muted">“{r.note}”</span>}</li>))}</ul>
+          </li>))}</ul>)}
+    </Card>
+  )
+}
+
 function TeamAvailability() {
+  const [cur, setCur] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })
   const members = useMembers()
   const today = todayStr()
   const evs = useQuery({
@@ -105,7 +137,10 @@ function TeamAvailability() {
   if (evs.isLoading || members.isLoading) return <PageLoader />
   if ((evs.data ?? []).length === 0) return <EmptyState title="Nenhum evento próximo" text="Crie escalas para acompanhar a disponibilidade da equipe nessas datas." action={<Link to="/escalas/nova"><Button variant="primary">Criar escala</Button></Link>} />
   const people = (members.data ?? []).filter((m) => m.active)
+  const panel = <UnavailablePanel from={toISODate(cur)} to={toISODate(new Date(cur.getFullYear(), cur.getMonth() + 1, 0))} title={`Indisponíveis em ${monthLabel(toISODate(cur))}`} subtitle="Quem marcou que não pode servir. Troque quem já estiver escalado nesses dias."
+    action={<div className="flex items-center gap-1"><IconButton label="Mês anterior" onClick={() => setCur(new Date(cur.getFullYear(), cur.getMonth() - 1, 1))}><ChevronLeft className="h-5 w-5" /></IconButton><IconButton label="Próximo mês" onClick={() => setCur(new Date(cur.getFullYear(), cur.getMonth() + 1, 1))}><ChevronRight className="h-5 w-5" /></IconButton></div>} />
   return (
+    <div className="space-y-6">{panel}
     <Card className="overflow-x-auto p-0">
       <table className="w-full min-w-[40rem] text-sm">
         <thead><tr className="border-b border-border text-left">
@@ -128,7 +163,7 @@ function TeamAvailability() {
             </tr>))}
         </tbody>
       </table>
-    </Card>
+    </Card></div>
   )
 }
 
