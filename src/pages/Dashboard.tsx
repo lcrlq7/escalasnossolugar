@@ -165,9 +165,9 @@ export default function Dashboard() {
             </Card>)}
           {isLeader && <UnavailablePanel from={today} to={addDays(today, 30)} title="Indisponíveis nos próximos 30 dias" subtitle="Quem marcou que não pode servir" limit={6} />}
           <Card className="p-5">
-            <SectionTitle title="Avisos importantes" action={isLeader && <Button variant="ghost" className="!px-2 !py-1 text-xs" onClick={() => setAnnOpen(true)}><Megaphone className="h-4 w-4" />Novo</Button>} />
+            <SectionTitle title="Avisos importantes" action={<div className="flex items-center gap-1">{isLeader && <Button variant="ghost" className="!px-2 !py-1 text-xs" onClick={() => setAnnOpen(true)}><Megaphone className="h-4 w-4" />Novo</Button>}<Link to="/avisos" className="rounded-lg px-2 py-1 text-xs font-semibold text-accenttext hover:bg-surface2">Ver todos</Link></div>} />
             {(anns.data ?? []).length === 0 ? <p className="text-sm text-muted">Nenhum aviso no momento.</p> : (
-              <ul className="space-y-3">{anns.data!.map((a) => (
+              <ul className="space-y-3">{anns.data!.slice(0, 3).map((a) => (
                 <li key={a.id} className="rounded-xl bg-surface2 p-3"><div className="flex items-start justify-between gap-2"><p className="text-sm font-bold">{a.title}</p>
                   {isLeader && <button aria-label="Excluir aviso" onClick={() => void delAnn(a.id)} className="text-muted hover:text-danger"><Trash2 className="h-4 w-4" /></button>}</div>
                   {a.body && <p className="mt-1 whitespace-pre-wrap text-sm text-muted">{a.body}</p>}<p className="mt-1.5 text-[11px] text-muted">{fmtDate(a.created_at)}</p></li>))}</ul>)}

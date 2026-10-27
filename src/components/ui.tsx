@@ -73,8 +73,8 @@ export function Card({ className, children }: { className?: string; children: Re
 }
 export function SectionTitle({ title, action, subtitle }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="mb-3 flex items-end justify-between gap-3">
-      <div><h2 className="text-base font-bold">{title}</h2>{subtitle && <p className="text-xs text-muted">{subtitle}</p>}</div>
+    <div className="mb-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+      <div className="min-w-0"><h2 className="text-base font-bold">{title}</h2>{subtitle && <p className="text-xs text-muted">{subtitle}</p>}</div>
       {action}
     </div>
   )

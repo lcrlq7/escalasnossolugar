@@ -9,6 +9,7 @@ import { ConfigMissing, ForgotPassword, Login, PendingApproval, ResetPassword, S
 import Dashboard from './pages/Dashboard'
 import Events from './pages/Events'
 import MySchedules from './pages/MySchedules'
+import Announcements from './pages/Announcements'
 import EventEditor from './pages/EventEditor'
 import EventView from './pages/EventView'
 import CalendarPage from './pages/CalendarPage'
@@ -71,6 +72,7 @@ export default function App() {
       <Route path="/redefinir-senha" element={<ResetPassword />} />
       <Route element={<Protected><Layout /></Protected>}>
         <Route index element={<Dashboard />} />
+        <Route path="avisos" element={<Announcements />} />
         <Route path="minhas-escalas" element={<MySchedules />} />
         <Route path="escalas" element={<Events />} />
         <Route path="escalas/nova" element={<Gate allow="leader"><EventEditor /></Gate>} />

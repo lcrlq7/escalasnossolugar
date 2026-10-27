@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Home, CalendarDays, Music2, ListMusic, Users, BarChart3, History, Settings, CalendarCheck, ClipboardList, UserCheck,
+  Home, CalendarDays, Music2, ListMusic, Users, BarChart3, History, Settings, CalendarCheck, ClipboardList, UserCheck, Megaphone,
   Bell, Sun, Moon, LogOut, Menu, X, UserCircle,
 } from 'lucide-react'
 import { useAuth } from '../context/Auth'
@@ -13,14 +13,15 @@ import { Avatar, ClickAway, IconButton } from './ui'
 import { KEYS } from '../lib/utils'
 import type { AppNotification } from '../types'
 
-interface NavItem { to: string; label: string; icon: typeof Home; show: boolean; end?: boolean }
+interface NavItem { to: string; label: string; short?: string; icon: typeof Home; show: boolean; end?: boolean }
 
 export function useNav(): NavItem[] {
   const { isLeader, isAdmin, member } = useAuth()
   return [
     { to: '/', label: 'Início', icon: Home, show: true, end: true },
-    { to: '/minhas-escalas', label: 'Minhas escalas', icon: UserCheck, show: !!member },
+    { to: '/minhas-escalas', label: 'Minhas escalas', short: 'Minhas', icon: UserCheck, show: !!member },
     { to: '/escalas', label: 'Escalas', icon: ClipboardList, show: true },
+    { to: '/avisos', label: 'Avisos', icon: Megaphone, show: true },
     { to: '/calendario', label: 'Calendário', icon: CalendarDays, show: true },
     { to: '/musicas', label: 'Músicas', icon: Music2, show: true },
     { to: '/repertorios', label: 'Repertórios', icon: ListMusic, show: isLeader },
@@ -185,7 +186,7 @@ export function Layout() {
         {bottom.map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end}
             className={({ isActive }) => cn('press flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 text-[11px] font-semibold transition-all duration-300', isActive ? 'bg-accent/15 text-accenttext' : 'text-muted')}>
-            {({ isActive }: { isActive: boolean }) => <><i.icon className={cn('h-5 w-5', isActive && 'nav-active')} />{i.label}</>}</NavLink>
+            {({ isActive }: { isActive: boolean }) => <><i.icon className={cn('h-5 w-5', isActive && 'nav-active')} />{i.short ?? i.label}</>}</NavLink>
         ))}
         <button onClick={() => setDrawer(true)} className="press flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 text-[11px] font-semibold text-muted"><Menu className="h-5 w-5" />Mais</button>
       </nav>
