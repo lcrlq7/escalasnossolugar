@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Clock, MapPin, UserCheck } from 'lucide-react'
+import { CalendarPlus, Clock, MapPin, UserCheck } from 'lucide-react'
+import { downloadIcs, type IcsEvent } from '../lib/ics'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { EVENT_TYPES, fmtTime, todayStr } from '../lib/utils'
 import type { EventStatus, EventType } from '../types'
-import { Badge, EmptyState, PageHeader, PageLoader } from '../components/ui'
+import { Badge, Button, EmptyState, PageHeader, PageLoader } from '../components/ui'
 import { DateBlock } from './Events'
 
 interface Row {
@@ -37,8 +38,10 @@ export default function MySchedules() {
   }, [q.data])
 
   if (!member) return <div><PageHeader title="Minhas escalas" /><EmptyState icon={<UserCheck className="h-6 w-6" />} title="Seu login ainda não está vinculado a um integrante" text="Peça ao líder ou administrador para vincular você em Configurações → Usuários." /></div>
+  const toIcs = (x: { ev: NonNullable<Row['event']>; fns: string[] }): IcsEvent => ({ id: x.ev.id, title: x.ev.title, event_date: x.ev.event_date, start_time: x.ev.start_time, end_time: x.ev.end_time, location: x.ev.location, roles: x.fns })
   const card = (x: { ev: NonNullable<Row['event']>; fns: string[] }) => (
-    <Link key={x.ev.id} to={`/escalas/${x.ev.id}`} className="card flex items-center gap-4 p-4 transition hover:border-accent/60">
+    <div key={x.ev.id} className="card flex items-center gap-2 pr-2 transition hover:border-accent/60">
+    <Link to={`/escalas/${x.ev.id}`} className="flex min-w-0 flex-1 items-center gap-4 p-4">
       <DateBlock date={x.ev.event_date} />
       <div className="min-w-0 flex-1">
         <p className="truncate font-bold">{x.ev.title}</p>
@@ -49,10 +52,13 @@ export default function MySchedules() {
         </div>
       </div>
       {x.fns.length > 0 && <Badge tone="ok">{x.fns.join(', ')}</Badge>}
-    </Link>)
+    </Link>
+    {x.ev.event_date >= todayStr() && <button aria-label="Adicionar à agenda do celular" title="Adicionar à agenda" onClick={() => downloadIcs([toIcs(x)], `escala-${x.ev.event_date}.ics`)} className="shrink-0 rounded-xl p-2.5 text-muted hover:bg-surface2 hover:text-accenttext"><CalendarPlus className="h-5 w-5" /></button>}
+    </div>)
   return (
     <div className="space-y-6">
-      <PageHeader title="Minhas escalas" subtitle="Os dias em que você está escalado(a)." />
+      <PageHeader title="Minhas escalas" subtitle="Os dias em que você está escalado(a)."
+        actions={next.length > 0 && <Button variant="outline" onClick={() => downloadIcs(next.map(toIcs))}><CalendarPlus className="h-4 w-4" />Adicionar todas à agenda</Button>} />
       {q.isLoading ? <PageLoader /> : <>
         {next.length === 0 ? <EmptyState icon={<UserCheck className="h-6 w-6" />} title="Você não está escalado(a) nos próximos dias" text="Quando o líder publicar uma escala com o seu nome, ela aparece aqui." />
           : <div className="stagger grid gap-3">{next.map(card)}</div>}
