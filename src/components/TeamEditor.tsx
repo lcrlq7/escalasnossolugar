@@ -89,8 +89,8 @@ export function TeamEditor({ event, assignments }: { event: EventRow; assignment
       {list.map((f) => {
         const here = assignments.filter((a) => a.function_id === f.id)
         const ids = new Set(here.map((a) => a.member_id))
-        const skilled = activeMembers.filter((m) => !ids.has(m.id) && m.member_functions?.some((x) => x.function_id === f.id))
-        const others = activeMembers.filter((m) => !ids.has(m.id) && !m.member_functions?.some((x) => x.function_id === f.id))
+        const skilled = activeMembers.filter((m) => !ids.has(m.id) && !unavailable.has(m.id) && m.member_functions?.some((x) => x.function_id === f.id))
+        const others = activeMembers.filter((m) => !ids.has(m.id) && !unavailable.has(m.id) && !m.member_functions?.some((x) => x.function_id === f.id))
         const label = (m: { id: string; full_name: string }) => `${m.full_name}${unavailable.has(m.id) ? ' — indisponível' : ''}`
         return (
           <div key={f.id} className="rounded-xl border border-border p-3">
