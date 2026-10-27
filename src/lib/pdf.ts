@@ -203,3 +203,50 @@ export function exportMonthPdf(opts: { church: string; monthLabel: string; month
   }
   doc.save(`escala-${opts.month}.pdf`)
 }
+
+export interface AvailabilityReport {
+  church: string; monthLabel: string; month: string
+  dates: { date: string; label: string }[] // datas de culto do mês
+  rows: { name: string; cells: ('available' | 'unavailable' | null)[]; scheduled: boolean[]; unavailDates: string[]; notes: string[] }[]
+}
+
+/** Relatório de disponibilidade do mês: integrantes nas linhas, datas de culto nas colunas. */
+export function exportAvailabilityPdf(r: AvailabilityReport) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
+  const W = 297, M = 12
+  const frame = (first: boolean) => {
+    doc.setFillColor(...DARK); doc.rect(0, 0, W, first ? 20 : 12, 'F'); doc.setFillColor(...GOLD); doc.rect(0, first ? 20 : 12, W, 1.2, 'F')
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(first ? 15 : 10)
+    doc.text(`DISPONIBILIDADE ${r.monthLabel.toUpperCase()}`, M, first ? 13 : 8)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(210, 210, 210)
+    doc.text(r.church, W - M, first ? 13 : 8, { align: 'right' })
+  }
+  frame(true)
+  const un = r.rows.filter((x) => x.unavailDates.length)
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(60, 60, 60)
+  doc.text(`${un.length} de ${r.rows.length} integrantes marcaram algum dia indisponível. Vermelho = indisponível · Verde = disponível · "escalado" = já está na equipe.`, M, 28)
+  autoTable(doc, {
+    startY: 32, margin: { left: M, right: M, top: 18 }, theme: 'grid', showHead: 'everyPage',
+    head: [['Integrante', ...r.dates.map((d) => d.label), 'Dias indisponíveis no mês']],
+    body: r.rows.map((x) => [x.name, ...x.cells.map((c, i) => (c === 'unavailable' ? 'Indisp.' : c === 'available' ? 'Disp.' : '—') + (x.scheduled[i] ? '\nescalado' : '')), x.unavailDates.join(', ') || '—']),
+    styles: { fontSize: 8.5, cellPadding: 1.5, lineColor: [200, 200, 200], lineWidth: 0.2, textColor: DARK, halign: 'center', valign: 'middle' },
+    headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontSize: 8.5 },
+    columnStyles: { 0: { halign: 'left', fontStyle: 'bold', cellWidth: 44 }, [r.dates.length + 1]: { halign: 'left', cellWidth: 60 } },
+    didParseCell: (d) => {
+      if (d.section !== 'body' || d.column.index === 0 || d.column.index > r.dates.length) return
+      const c = r.rows[d.row.index]?.cells[d.column.index - 1]
+      if (c === 'unavailable') { d.cell.styles.fillColor = [252, 222, 222]; d.cell.styles.textColor = [160, 30, 30]; d.cell.styles.fontStyle = 'bold' }
+      else if (c === 'available') { d.cell.styles.fillColor = [222, 245, 230]; d.cell.styles.textColor = [25, 110, 55] }
+    },
+  })
+  const withNotes = r.rows.filter((x) => x.notes.length)
+  if (withNotes.length) {
+    autoTable(doc, {
+      startY: (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8, margin: { left: M, right: M, top: 18 }, theme: 'grid',
+      head: [['Observações', '']], body: withNotes.map((x) => [x.name, x.notes.join('\n')]),
+      styles: { fontSize: 9, cellPadding: 1.8, lineColor: [200, 200, 200], lineWidth: 0.2, textColor: DARK, valign: 'top' },
+      headStyles: { fillColor: DARK, textColor: [255, 255, 255] }, columnStyles: { 0: { cellWidth: 50, fontStyle: 'bold' } },
+    })
+  }
+  doc.save(`disponibilidade-${r.month}.pdf`)
+}

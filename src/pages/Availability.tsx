@@ -2,11 +2,12 @@ import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronLeft, ChevronRight, Eraser, X } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Eraser, FileDown, X } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
 import { useToast } from '../context/Toast'
 import { useMembers } from '../lib/queries'
+import { exportAvailabilityPdf } from '../lib/pdf'
 import { cn, fmtDate, fmtTime, monthLabel, toISODate, todayStr } from '../lib/utils'
 import type { EventRow } from '../types'
 import { Badge, Button, Card, EmptyState, Field, IconButton, Input, Modal, PageHeader, PageLoader, SectionTitle, Tabs } from '../components/ui'
@@ -123,6 +124,9 @@ export function UnavailablePanel({ from, to, title, subtitle, action, limit }: {
 function TeamAvailability() {
   const [cur, setCur] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })
   const members = useMembers()
+  const { church } = useAuth()
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
   const today = todayStr()
   const evs = useQuery({
     queryKey: ['team-av-events'],
@@ -137,8 +141,30 @@ function TeamAvailability() {
   if (evs.isLoading || members.isLoading) return <PageLoader />
   if ((evs.data ?? []).length === 0) return <EmptyState title="Nenhum evento próximo" text="Crie escalas para acompanhar a disponibilidade da equipe nessas datas." action={<Link to="/escalas/nova"><Button variant="primary">Criar escala</Button></Link>} />
   const people = (members.data ?? []).filter((m) => m.active)
+  const report = async () => {
+    setBusy(true)
+    try {
+      const from = toISODate(cur), to = toISODate(new Date(cur.getFullYear(), cur.getMonth() + 1, 0))
+      const evsM = unwrap(await supabase.from('events').select('id, event_date, event_assignments(member_id)').gte('event_date', from).lte('event_date', to).in('status', ['draft', 'published', 'completed']).order('event_date')) as unknown as { id: string; event_date: string; event_assignments: { member_id: string }[] }[]
+      const avs = unwrap(await supabase.from('availability').select('member_id, date, status, note').gte('date', from).lte('date', to).order('date')) as Av[]
+      const dates = [...new Set(evsM.map((e) => e.event_date))]
+      const sch = new Set(evsM.flatMap((e) => e.event_assignments.map((a) => `${a.member_id}|${e.event_date}`)))
+      const fd = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`
+      const rows = (members.data ?? []).filter((m) => m.active).sort((a, b) => a.full_name.localeCompare(b.full_name)).map((m) => {
+        const mine = avs.filter((a) => a.member_id === m.id)
+        return {
+          name: m.full_name,
+          cells: dates.map((d) => mine.find((a) => a.date === d)?.status ?? null),
+          scheduled: dates.map((d) => sch.has(`${m.id}|${d}`)),
+          unavailDates: mine.filter((a) => a.status === 'unavailable').map((a) => fd(a.date)),
+          notes: mine.filter((a) => a.status === 'unavailable' && a.note).map((a) => `${fd(a.date)}: ${a.note}`),
+        }
+      })
+      exportAvailabilityPdf({ church: church?.name ?? '', month: from.slice(0, 7), monthLabel: monthLabel(from), dates: dates.map((d) => ({ date: d, label: fd(d) })), rows })
+    } catch (e) { toast.error(e) } finally { setBusy(false) }
+  }
   const panel = <UnavailablePanel from={toISODate(cur)} to={toISODate(new Date(cur.getFullYear(), cur.getMonth() + 1, 0))} title={`Indisponíveis em ${monthLabel(toISODate(cur))}`} subtitle="Quem marcou que não pode servir. Troque quem já estiver escalado nesses dias."
-    action={<div className="flex items-center gap-1"><IconButton label="Mês anterior" onClick={() => setCur(new Date(cur.getFullYear(), cur.getMonth() - 1, 1))}><ChevronLeft className="h-5 w-5" /></IconButton><IconButton label="Próximo mês" onClick={() => setCur(new Date(cur.getFullYear(), cur.getMonth() + 1, 1))}><ChevronRight className="h-5 w-5" /></IconButton></div>} />
+    action={<div className="flex items-center gap-1"><Button variant="outline" className="!px-3 !py-1.5 text-xs" loading={busy} onClick={() => void report()}><FileDown className="h-4 w-4" />Relatório PDF</Button><IconButton label="Mês anterior" onClick={() => setCur(new Date(cur.getFullYear(), cur.getMonth() - 1, 1))}><ChevronLeft className="h-5 w-5" /></IconButton><IconButton label="Próximo mês" onClick={() => setCur(new Date(cur.getFullYear(), cur.getMonth() + 1, 1))}><ChevronRight className="h-5 w-5" /></IconButton></div>} />
   return (
     <div className="space-y-6">{panel}
     <Card className="overflow-x-auto p-0">
