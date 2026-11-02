@@ -2,6 +2,11 @@
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()))
 
+// necessário para o navegador oferecer "instalar app"; só repassa as navegações
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') event.respondWith(fetch(event.request).catch(() => new Response('Sem conexão. Tente de novo.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })))
+})
+
 self.addEventListener('push', (event) => {
   let d = {}
   try { d = event.data ? event.data.json() : {} } catch { d = { title: 'Louvor em Escala', body: event.data ? event.data.text() : '' } }

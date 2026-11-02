@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { UnavailablePanel } from './Availability'
+import { InstallCard } from '../components/InstallCard'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, ArrowRight, CalendarPlus, Megaphone, Music2, Plus, Trash2, Wrench, CalendarDays, Clock, MapPin, TrendingUp } from 'lucide-react'
 import { supabase, unwrap } from '../lib/supabase'
@@ -104,6 +105,8 @@ export default function Dashboard() {
         actions={isLeader && (<>
           <Link to="/escalas/nova"><Button variant="primary"><CalendarPlus className="h-4 w-4" />Criar escala</Button></Link>
           <Button onClick={() => setAddSong(true)}><Plus className="h-4 w-4" />Adicionar música</Button></>)} />
+
+      <InstallCard dismissible />
 
       {!isLeader && !member && !hasRole('minister') && !isTech && (
         <p className="rounded-xl border border-warn/40 bg-warn/10 p-3 text-sm text-warn">Seu usuário ainda não tem um cargo definido. Peça a um administrador para configurar seu acesso.</p>)}

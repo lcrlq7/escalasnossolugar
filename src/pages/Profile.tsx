@@ -1,3 +1,4 @@
+import { InstallCard } from '../components/InstallCard'
 import { useEffect, useState } from 'react'
 import { supabase, unwrap } from '../lib/supabase'
 import { useAuth } from '../context/Auth'
@@ -47,6 +48,7 @@ export default function Profile() {
   return (
     <div className="max-w-2xl space-y-6">
       <PageHeader title="Meu perfil" />
+      <InstallCard />
       <Card className="space-y-3 p-5">
         <SectionTitle title="Avisos no celular" subtitle="Receba lembretes de escala, pedidos de troca e avisos mesmo com o site fechado." />
         {push === 'unsupported' ? <p className="text-sm text-muted">Este navegador não suporta avisos. No iPhone, abra o site no Safari, toque em Compartilhar → Adicionar à Tela de Início e abra o app instalado.</p>
