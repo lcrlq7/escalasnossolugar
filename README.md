@@ -1,92 +1,43 @@
 # Louvor em Escala
 
-Sistema web para organizar o ministério de louvor da **Igreja Metodista — Nosso Lugar**: escalas, banco de músicas, repertórios, disponibilidade, confirmações, calendário, histórico e relatórios.
+Sistema web do ministério de louvor da **Igreja Metodista — Nosso Lugar**: escalas, músicas, repertórios, disponibilidade, avisos e relatórios. Funciona no celular (pode ser instalado na tela de início) e no computador, em português do Brasil, com tema escuro e claro.
 
-**Stack:** React 18 + TypeScript + Vite, Tailwind CSS, Supabase (Auth, Postgres com RLS, Edge Functions), TanStack Query, FullCalendar, dnd-kit, Recharts, jsPDF.
-Interface em português do Brasil (DD/MM/AAAA, 24 h), tema escuro (padrão) e claro, responsiva.
+## Funcionalidades
 
-## Estrutura
+### Para todos os integrantes
+- **Minhas escalas:** lista só os dias em que a pessoa está escalada, com horário, local e função. Cada dia pode ser adicionado à agenda do celular (.ics), com lembretes de 1 dia e 2 horas antes.
+- **Escala completa:** equipe por função, repertório com tons, observações e link da playlist no Spotify criada pelo ministro.
+- **Pedir troca:** a pessoa escolhe quem pode ficar no seu lugar; o colega aceita ou recusa e o líder aprova.
+- **Disponibilidade:** marca os dias em que não pode servir, com observação.
+- **Calendário** (mês, semana e lista) com todas as escalas.
+- **Músicas:** biblioteca com busca, favoritos, tom, cifra e links do Spotify e do YouTube.
+- **Modo palco:** letra e cifra em tela cheia, com transposição de tom.
+- **Avisos:** mural de recados do ministério em página própria.
+- **Notificações** dentro do sistema e avisos no celular (push).
+- **Perfil:** dados pessoais, senha, avisos do celular e guia para colocar o app na tela de início.
 
-```
-src/                       aplicação React
-  pages/                   telas (Dashboard, Escalas, Músicas, Repertórios, Relatórios…)
-  components/              UI, editor de repertório, montagem automática, modo palco
-  lib/                     supabase, regras de repertório, PDF, utilidades
-supabase/migrations/       scripts SQL (schema, RLS, funções) — aplicar em ordem
-supabase/functions/music-search/   função de servidor para pesquisa externa de músicas
-public/brand/              logos da igreja
-```
+### Para o ministro responsável pela escala
+- Monta o repertório e ajusta os tons, **somente da escala em que é ministro**.
+- Cadastra músicas novas sem sair da escala.
+- Cria a playlist no Spotify; o link fica disponível para toda a equipe abrir direto.
 
-## Como rodar
+### Para líderes e administradores
+- **Escalas:** criação rápida com datas prontas (domingo 18h, quinta 19h30), nome e horário automáticos pelo dia da semana, rascunho, publicação com verificação de pendências, duplicar, cancelar e concluir.
+- **Escalas recorrentes:** gera as escalas das próximas semanas de uma vez.
+- **Equipe:** 1 ministro, 3 vocais e instrumentos; **Sugerir equipe** considera funções, disponibilidade, conflitos de horário e quem serviu menos.
+- **Alertas:** função obrigatória vazia, conflito de horário, indisponibilidade, repertório vazio e preparação de som.
+- **Disponibilidade da equipe:** lista de indisponíveis do mês, avisos na tela inicial e relatório mensal em PDF.
+- **Repertório:** arrastar para ordenar, tom por culto, itens especiais (oração, transição), modelos, copiar de outro culto e montagem automática editável.
+- **Músicas:** cadastro, edição, arquivar, detectar duplicadas, pesquisar na internet e importar playlist do Spotify ou do YouTube.
+- **Integrantes:** cadastro, edição, funções de cada um e quantas vezes cada pessoa foi escalada no mês.
+- **PDFs:** escala do culto (deitado) e escala do mês em grade, como a planilha.
+- **Relatórios:** quantas vezes cada pessoa foi escalada, participação por função, músicas mais e menos usadas e repertórios anteriores.
+- **Avisos:** publicar e apagar recados para toda a equipe.
+- **Histórico** e registro de atividades.
 
-```bash
-npm install
-cp .env.example .env      # preencha as duas variáveis
-npm run dev
-```
+### Para administradores
+- **Usuários:** liberar quem se cadastrou, vincular ao nome na lista de integrantes (com sugestão automática), definir cargos (administrador, líder, ministro, técnico de som) e desativar acessos.
+- **Configurações:** funções e vagas por culto, categorias, horários padrão e integrações.
 
-Variáveis (só valores públicos vão ao navegador):
-
-| Variável | Onde achar |
-|---|---|
-| `VITE_SUPABASE_URL` | Supabase → Project Settings → API |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | mesma tela (chave *publishable*/anon). **Nunca** use a `service_role` no front-end. |
-
-## Configurar o Supabase
-
-1. Crie o projeto e aplique, **em ordem**, os arquivos de `supabase/migrations/` (SQL Editor ou `supabase db push`).
-2. Publique a função de busca: `supabase functions deploy music-search`.
-3. **Authentication → URL Configuration:** defina *Site URL* com o endereço do site (Vercel) e inclua em *Redirect URLs* `https://SEU-SITE/redefinir-senha` — necessário para a recuperação de senha.
-4. **Authentication → Providers → Email:** decida se exige confirmação de e-mail. O sistema funciona nos dois modos.
-5. **Primeiro acesso:** a **primeira pessoa que se cadastrar vira administradora**. Os demais cadastros ficam “aguardando liberação” até um administrador liberar o acesso e definir cargos em *Configurações → Usuários*.
-
-### Pesquisa de músicas (opcional)
-
-Segredos ficam só no Supabase (`supabase secrets set ...`), nunca no front-end:
-
-- iTunes/Apple Music: funciona **sem chave** (capa, artista, álbum, duração).
-- YouTube: `YOUTUBE_API_KEY` (YouTube Data API v3). Sem a chave, cole o link do vídeo na busca — o título é lido via oEmbed.
-- Spotify: `SPOTIFY_CLIENT_ID` e `SPOTIFY_CLIENT_SECRET`.
-
-### Criar playlist no Spotify (opcional)
-
-Funções `spotify` e `spotify-callback`. Crie um app em developer.spotify.com/dashboard com o Redirect URI
-`https://SEU-PROJETO.supabase.co/functions/v1/spotify-callback`, cadastre `SPOTIFY_CLIENT_ID` e `SPOTIFY_CLIENT_SECRET` nos Secrets e, em *User Management* do app, os e-mails de quem vai usar (modo de desenvolvimento). Em seguida, no repertório: **Criar playlist → Conectar Spotify**. Os tokens ficam na tabela `music_connections`, sem acesso pelo navegador. Sem essa configuração, o botão mostra o aviso e oferece “Copiar links”. A criação no YouTube usa um link `watch_videos` (sem login); a criação direta via YouTube Data API **não está implementada**.
-
-### Importar playlist para a biblioteca
-
-**Músicas → Importar playlist.** Cole o link de uma playlist do Spotify (pública; usa a página pública quando a API nega leitura, até ~100 faixas) ou do YouTube (exige `YOUTUBE_API_KEY` nos Secrets). Músicas que já existem são ignoradas. **Buscar capas** preenche capas faltantes via oEmbed do Spotify.
-
-### Segurança
-
-- Todas as tabelas têm RLS; usuários não aprovados não enxergam dados da igreja; colunas sensíveis de `profiles` não são editáveis pelo próprio usuário.
-- Links salvos só aceitam `http(s)` (front + constraints no banco). `vercel.json` define CSP, HSTS, anti-iframe e demais cabeçalhos.
-- Captcha opcional (hCaptcha): defina `VITE_HCAPTCHA_SITEKEY` na Vercel **e** ligue o captcha em *Authentication → Attack Protection* com o *secret* no Supabase. Ligue sempre os dois lados.
-- Ative também *Leaked password protection* e senha mínima ≥ 8 em *Authentication → Providers → Email* (se o plano permitir).
-
-*Configurações → Integrações* testa o estado de cada fonte. Dados que a fonte não fornece (tom, BPM, letra) ficam em branco para preenchimento manual — nada é inventado.
-
-## Deploy (Vercel)
-
-Importe o repositório, framework *Vite*, e defina as duas variáveis de ambiente acima. O `vercel.json` já faz o redirecionamento de rotas (SPA).
-
-## Segurança
-
-- RLS ativa em todas as tabelas; funções auxiliares ficam em schema não exposto (`private`).
-- Cargos: `admin`, `leader` (líder), `minister`, `sound_tech` (técnico de som). Integrantes só alteram a **própria** confirmação (RPC `respond_event`); o técnico só altera observações técnicas e “som pronto”.
-- Nenhum segredo no código. Links de repertório exigem login e autorização.
-
-## O que está pronto × o que depende de serviço externo
-
-**Pronto (usa só Supabase):** login/cadastro/recuperação de senha com aprovação por administrador; cargos e vínculo usuário↔integrante; integrantes e funções; escalas (rascunho, publicação com verificação de pendências, duplicar, cancelar, concluir); confirmar/recusar presença; alertas (função obrigatória vazia, conflito de horário, indisponibilidade, repertório vazio, falta de som); disponibilidade individual e matriz da equipe; banco de músicas (busca, favoritos, tags, arquivar, detecção de duplicadas, sugestões de integrantes); repertórios com arrastar-e-soltar, tom por culto, itens especiais, modelos, copiar de outro culto, link interno; **montagem automática** (sugestão editável, nunca publicada sozinha); modo palco; exportação em PDF; calendário; histórico e registro de atividades; relatórios; notificações internas; configurações; tema claro/escuro.
-
-**Depende de configuração externa:**
-- Busca no YouTube/Spotify → chaves de API (item acima). Sem elas, iTunes e colagem de links continuam funcionando.
-- Recuperação de senha e confirmação de e-mail → URLs e e-mail configurados no painel do Supabase (o envio usa o serviço de e-mail do Supabase, com limites no plano gratuito).
-- Notificações **por e-mail/WhatsApp/push do celular**: **não implementadas** — existem apenas notificações dentro do sistema.
-
-**Limitações conhecidas:** a montagem automática é uma heurística (pontuação por tema, categoria, BPM, tons confortáveis e tempo desde o último uso), não inteligência artificial; o tom/BPM só aparecem se cadastrados.
-
-## Testes
-
-`npm run typecheck` verifica os tipos. As regras de acesso foram conferidas com consultas SQL simulando cada cargo (resumo em `supabase/tests/rls_smoke.md`). Teste manual sugerido: cadastrar o 1º usuário (admin), criar funções/integrantes, criar e publicar uma escala, confirmar presença com outro usuário.
+### Técnico de som
+- Preenche as observações técnicas da escala e marca "preparação do som concluída".
